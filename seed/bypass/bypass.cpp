@@ -16,6 +16,6 @@ int main(void)
 {
     hw.Init();
     hw.SetAudioBlockSize(4);
-    hw.StartAudio(Callback);
+    // hw.StartAudio(Callback);
     while(1) {}
 }

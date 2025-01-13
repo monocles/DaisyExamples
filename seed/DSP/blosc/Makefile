@@ -1,5 +1,6 @@
 # Project Name
 TARGET = blosc
+APP_TYPE = BOOT_SRAM
 
 USE_DAISYSP_LGPL=1
 

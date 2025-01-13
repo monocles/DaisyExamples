@@ -1,5 +1,6 @@
 # Project Name
 TARGET = bypass
+APP_TYPE = BOOT_SRAM
 
 # Sources
 CPP_SOURCES = bypass.cpp

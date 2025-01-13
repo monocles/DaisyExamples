@@ -1,5 +1,6 @@
 # Project Name
 TARGET = Osc
+APP_TYPE = BOOT_SRAM
 
 # Sources
 CPP_SOURCES = Osc.cpp
