@@ -255,8 +255,6 @@ class Voice {
   float out_buffer_[kMaxBlockSize];
   float aux_buffer_[kMaxBlockSize];
   
-  float trigger_value_;
-  
   DISALLOW_COPY_AND_ASSIGN(Voice);
 };
 

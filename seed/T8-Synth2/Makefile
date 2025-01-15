@@ -12,6 +12,8 @@ drivers/encoder_controller.cpp \
 drivers/display_controller.cpp \
 drviers/region.cpp \
 drivers/font.cpp \
+ui_pages/performance_page.cpp \
+ui_pages/ui_page.cpp \
 $(STMLIB_DIR)/dsp/units.cpp \
 $(STMLIB_DIR)/system/system_clock.cpp \
 $(STMLIB_DIR)/utils/random.cpp
