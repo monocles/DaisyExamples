@@ -28,7 +28,7 @@ class PitchPage : public UiPage {
   region note_region_;  // Добавляем регион для отображения нот
   region footer_region_;  // Добавляем регион для футера
   bool needs_redraw_{false};
-  
+
   static constexpr uint8_t DISPLAY_HEIGHT = 64;
   static constexpr uint8_t DISPLAY_WIDTH = 64;
 
@@ -62,6 +62,8 @@ class PitchPage : public UiPage {
   int8_t footer_value_a_{0}; // Значение A от -12 до +12
   int8_t footer_value_b_{0}; // Значение B от -12 до +12
   void UpdateFooterValues(); // Метод для обновления значений в футере
+
+  void UpdatePatchNote(const Note& note, plaits::Patch* patch);  // Добавляем объявление метода
 };
 
 }  // namespace t8synth

@@ -6,32 +6,41 @@
 const int32_t kLongPressDuration = 1000;
 
 void Ui::Init(EncoderController* encoders, DisplayController* display, 
-              PotController* pots, plaits::Patch* patch, 
-              plaits::Voice* voice, plaits::Modulations* modulations) {
-  encoders_ = encoders;
-  display_ = display;
-  pots_ = pots;
-  patch_ = patch;
-  voice_ = voice;
-  modulations_ = modulations;
+              PotController* pots, plaits::Patch* patch,
+              plaits::Patch* patch2, plaits::Patch* patch3, plaits::Patch* patch4,
+              plaits::Voice* voice, plaits::Voice* voice2, 
+              plaits::Voice* voice3, plaits::Voice* voice4,
+              plaits::Modulations* modulations) {
+    encoders_ = encoders;
+    display_ = display;
+    pots_ = pots;
+    patch_ = patch;
+    patch2_ = patch2;
+    patch3_ = patch3;
+    patch4_ = patch4;
+    voice_ = voice;
+    voice2_ = voice2;
+    voice3_ = voice3;
+    voice4_ = voice4;
+    modulations_ = modulations;
 
-  system_clock.Init();
-  encoders_->set_sensitivity(2);
-  queue_.Init();
+    system_clock.Init();
+    encoders_->set_sensitivity(2);
+    queue_.Init();
 
-  // Initialize input states
-  for(int i = 0; i < EncoderController::NUM_ENCODERS; i++) {
-      encoder_press_time_[i] = 0;
-      encoder_long_press_event_sent_[i] = false;
-      encoder_pressed_[i] = false;
-  }
+    // Initialize input states
+    for(int i = 0; i < EncoderController::NUM_ENCODERS; i++) {
+        encoder_press_time_[i] = 0;
+        encoder_long_press_event_sent_[i] = false;
+        encoder_pressed_[i] = false;
+    }
 
-  for(int i = 0; i < EncoderController::NUM_BUTTONS; i++) {
-      button_states_[i] = false;
-      prev_button_states_[i] = false;
-  }
+    for(int i = 0; i < EncoderController::NUM_BUTTONS; i++) {
+        button_states_[i] = false;
+        prev_button_states_[i] = false;
+    }
 
-  InitPages();
+    InitPages();
 }
 
 void Ui::Poll() {
@@ -190,7 +199,10 @@ void Ui::InitPages() {
     // Инициализация всех страниц
     for(int i = 0; i < PAGE_LAST; i++) {
         if(pages_[i]) {
-            pages_[i]->SetContext(patch_, voice_, modulations_, display_);
+            pages_[i]->SetContext(
+                patch_, patch2_, patch3_, patch4_,  // Все патчи
+                voice_, voice2_, voice3_, voice4_,  // Все голоса
+                modulations_, display_);
             pages_[i]->OnInit();
         }
     }

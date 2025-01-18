@@ -28,7 +28,13 @@ class Ui {
             DisplayController* display, 
             PotController* pots,
             plaits::Patch* patch, 
-            plaits::Voice* voice, 
+            plaits::Patch* patch2,
+            plaits::Patch* patch3,
+            plaits::Patch* patch4,
+            plaits::Voice* voice,
+            plaits::Voice* voice2,
+            plaits::Voice* voice3,
+            plaits::Voice* voice4,
             plaits::Modulations* modulations);
   void Poll();
   void DoEvents();
@@ -49,6 +55,13 @@ class Ui {
   plaits::Patch* patch_;
   plaits::Voice* voice_;
   plaits::Modulations* modulations_;
+
+  plaits::Patch* patch2_{nullptr};
+  plaits::Patch* patch3_{nullptr};
+  plaits::Patch* patch4_{nullptr};
+  plaits::Voice* voice2_{nullptr};
+  plaits::Voice* voice3_{nullptr};
+  plaits::Voice* voice4_{nullptr};
 
   // Button state tracking
   uint32_t encoder_press_time_[EncoderController::NUM_ENCODERS]{};

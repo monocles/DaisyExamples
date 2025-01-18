@@ -166,17 +166,34 @@ void PitchPage::OnEncoder(uint8_t encoder, int32_t increment) {
     
     if(encoder < 4) {
         UpdateNoteByEncoder(encoder, increment);
-    } 
+        note_region_.dirty = 1;  // Используем встроенный флаг региона
+        
+        // Обновляем patch.note для всех энкодеров
+        if(encoder == 0) {
+            UpdatePatchNote(left_notes_[0], patch_);
+        }
+        else if(encoder == 1) {
+            UpdatePatchNote(left_notes_[1], patch2_);
+        }
+        else if(encoder == 2) {
+            UpdatePatchNote(left_notes_[2], patch3_);
+        }
+        else if(encoder == 3) {
+            UpdatePatchNote(left_notes_[3], patch4_);
+        }
+    }
     else if(encoder >= 7 && encoder <= 10) {
         UpdateNoteByEncoder(encoder - 7 + 4, increment);
     }
     else if(encoder == 5) {
         footer_value_a_ = fclamp(footer_value_a_ + increment, -12, 12);
         UpdateFooterValues();
+        footer_region_.dirty = 1;  // Используем встроенный флаг региона
     }
     else if(encoder == 6) {
         footer_value_b_ = fclamp(footer_value_b_ + increment, -12, 12);
         UpdateFooterValues();
+        footer_region_.dirty = 1;  // Используем встроенный флаг региона
     }
     
     needs_redraw_ = true;
@@ -191,41 +208,52 @@ void PitchPage::OnSwitch(uint8_t sw, bool pressed) {
 void PitchPage::UpdateDisplay() {
     if(!is_active_) return;
 
-    static uint32_t last_update_time = 0;
-    uint32_t current_time = System::GetNow();
-    
-    // Принудительно обновляем если прошло достаточно времени
-    
-    if(needs_redraw_ ) {
-        DrawPattern();
-        DrawNotes();
-        DrawFooterSlider();
-        UpdateFooterValues();
+    if(needs_redraw_) {
+        // Обновляем только грязные регионы
+        if(display_region_.dirty) {
+            display_->DrawRegion(display_region_.x, display_region_.y, 
+                               display_region_.w, display_region_.h,
+                               display_region_.data);
+            display_region_.dirty = 0;
+        }
         
-        display_->DrawRegion(display_region_.x, display_region_.y, 
-                           display_region_.w, display_region_.h,
-                           display_region_.data);
+        if(pattern_region_.dirty) {
+            DrawPattern();
+            display_->DrawRegion(pattern_region_.x, pattern_region_.y,
+                               pattern_region_.w, pattern_region_.h, 
+                               pattern_region_.data);
+            pattern_region_.dirty = 0;
+        }
         
-        display_->DrawRegion(pattern_region_.x, pattern_region_.y,
-                           pattern_region_.w, pattern_region_.h, 
-                           pattern_region_.data);
-
-        display_->DrawRegion(note_region_.x, note_region_.y,
-                           note_region_.w, note_region_.h, 
-                           note_region_.data);
-
-        display_->DrawRegion(footer_region_.x, footer_region_.y,
-                           footer_region_.w, footer_region_.h, 
-                           footer_region_.data);
-                           
+        if(note_region_.dirty) {
+            DrawNotes();
+            display_->DrawRegion(note_region_.x, note_region_.y,
+                               note_region_.w, note_region_.h, 
+                               note_region_.data);
+            note_region_.dirty = 0;
+        }
+        
+        if(footer_region_.dirty) {
+            DrawFooterSlider();
+            UpdateFooterValues();
+            display_->DrawRegion(footer_region_.x, footer_region_.y,
+                               footer_region_.w, footer_region_.h, 
+                               footer_region_.data);
+            footer_region_.dirty = 0;
+        }
+        
         needs_redraw_ = false;
-        last_update_time = current_time;
     }
 }
 
 void PitchPage::OnEnterPage() {
     is_active_ = true;
-    needs_redraw_ = true;
+    
+    // При входе на страницу помечаем все регионы как грязные
+    display_region_.dirty = 1;
+    pattern_region_.dirty = 1;
+    note_region_.dirty = 1;
+    footer_region_.dirty = 1;
 
     // Очищаем все регионы
     region_fill(&display_region_, 0x0);
@@ -358,6 +386,25 @@ void PitchPage::UpdateFooterValues() {
   region_string(&footer_region_, "SCALE", 52, 11, 0xf, 0x0, 0);
   region_string_font2(&footer_region_, str_a, 20, 4, 0xf, 0x0);
   region_string_font2(&footer_region_, str_b, 90, 4, 0xf, 0x0);
+}
+
+void PitchPage::UpdatePatchNote(const Note& note, plaits::Patch* patch) {
+    int base_note = 60; // C4 = 60 в MIDI
+    int octave_offset = (note.octave - 4) * 12;
+    int note_offset = 0;
+    
+    switch(note.base) {
+        case 'C': note_offset = 0; break;
+        case 'D': note_offset = 2; break;
+        case 'E': note_offset = 4; break;
+        case 'F': note_offset = 5; break;
+        case 'G': note_offset = 7; break;
+        case 'A': note_offset = 9; break;
+        case 'B': note_offset = 11; break;
+    }
+    
+    if(note.sharp) note_offset++;
+    patch->note = base_note + octave_offset + note_offset;
 }
 
 }  // namespace t8synth
