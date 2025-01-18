@@ -8,6 +8,7 @@
 #include "drivers/pot_controller.h"
 #include "dsp/voice.h"
 #include "ui_pages/ui_page.h"
+#include "voice_manager.h"  // Add this include
 
 extern daisy::DaisySeed hw;
 
@@ -27,14 +28,7 @@ class Ui {
   void Init(EncoderController* encoders, 
             DisplayController* display, 
             PotController* pots,
-            plaits::Patch* patch, 
-            plaits::Patch* patch2,
-            plaits::Patch* patch3,
-            plaits::Patch* patch4,
-            plaits::Voice* voice,
-            plaits::Voice* voice2,
-            plaits::Voice* voice3,
-            plaits::Voice* voice4,
+            VoiceManager* voices,
             plaits::Modulations* modulations);
   void Poll();
   void DoEvents();
@@ -56,13 +50,12 @@ class Ui {
   plaits::Voice* voice_;
   plaits::Modulations* modulations_;
 
-  plaits::Patch* patch2_{nullptr};
-  plaits::Patch* patch3_{nullptr};
-  plaits::Patch* patch4_{nullptr};
-  plaits::Voice* voice2_{nullptr};
-  plaits::Voice* voice3_{nullptr};
-  plaits::Voice* voice4_{nullptr};
-
+  static constexpr size_t NUM_VOICES = 4;
+  plaits::Patch* patches_[NUM_VOICES]{nullptr};
+  plaits::Voice* voices_[NUM_VOICES]{nullptr};
+  
+  VoiceManager* voice_manager_{nullptr};
+  
   // Button state tracking
   uint32_t encoder_press_time_[EncoderController::NUM_ENCODERS]{};
   bool encoder_long_press_event_sent_[EncoderController::NUM_ENCODERS]{};

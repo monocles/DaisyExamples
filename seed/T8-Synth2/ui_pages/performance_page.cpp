@@ -56,7 +56,14 @@ void PerformancePage::OnEncoder(uint8_t encoder, int32_t increment) {
       if(current_menu_item_ < 0) current_menu_item_ = 0;
       if(current_menu_item_ >= NUM_MENU_ITEMS) current_menu_item_ = NUM_MENU_ITEMS - 1;
       current_engine_ = current_menu_item_ % NUM_ENGINES;
-      patch_->engine = current_engine_;
+      
+      // Обновляем engine для всех голосов
+      for(size_t i = 0; i < NUM_VOICES; i++) {
+          if(patches_[i]) {
+              patches_[i]->engine = current_engine_;
+          }
+      }
+      
       needs_redraw_ = true;  // Request redraw instead of direct update
       break;
       

@@ -166,20 +166,11 @@ void PitchPage::OnEncoder(uint8_t encoder, int32_t increment) {
     
     if(encoder < 4) {
         UpdateNoteByEncoder(encoder, increment);
-        note_region_.dirty = 1;  // Используем встроенный флаг региона
+        note_region_.dirty = 1;
         
-        // Обновляем patch.note для всех энкодеров
-        if(encoder == 0) {
-            UpdatePatchNote(left_notes_[0], patch_);
-        }
-        else if(encoder == 1) {
-            UpdatePatchNote(left_notes_[1], patch2_);
-        }
-        else if(encoder == 2) {
-            UpdatePatchNote(left_notes_[2], patch3_);
-        }
-        else if(encoder == 3) {
-            UpdatePatchNote(left_notes_[3], patch4_);
+        // Используем индексы массива
+        if(encoder < NUM_VOICES) {
+            UpdatePatchNote(left_notes_[encoder], patches_[encoder]);
         }
     }
     else if(encoder >= 7 && encoder <= 10) {
@@ -189,6 +180,12 @@ void PitchPage::OnEncoder(uint8_t encoder, int32_t increment) {
         footer_value_a_ = fclamp(footer_value_a_ + increment, -12, 12);
         UpdateFooterValues();
         footer_region_.dirty = 1;  // Используем встроенный флаг региона
+        
+        // При изменении footer_value_a_ обновляем все 4 голоса
+        UpdatePatchNote(left_notes_[0], patches_[0]);
+        UpdatePatchNote(left_notes_[1], patches_[1]);
+        UpdatePatchNote(left_notes_[2], patches_[2]);
+        UpdatePatchNote(left_notes_[3], patches_[3]);
     }
     else if(encoder == 6) {
         footer_value_b_ = fclamp(footer_value_b_ + increment, -12, 12);
@@ -404,7 +401,8 @@ void PitchPage::UpdatePatchNote(const Note& note, plaits::Patch* patch) {
     }
     
     if(note.sharp) note_offset++;
-    patch->note = base_note + octave_offset + note_offset;
+    // Добавляем смещение от footer_value_a_
+    patch->note = base_note + octave_offset + note_offset + footer_value_a_;
 }
 
 }  // namespace t8synth

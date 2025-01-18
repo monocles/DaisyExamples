@@ -6,23 +6,20 @@
 const int32_t kLongPressDuration = 1000;
 
 void Ui::Init(EncoderController* encoders, DisplayController* display, 
-              PotController* pots, plaits::Patch* patch,
-              plaits::Patch* patch2, plaits::Patch* patch3, plaits::Patch* patch4,
-              plaits::Voice* voice, plaits::Voice* voice2, 
-              plaits::Voice* voice3, plaits::Voice* voice4,
+              PotController* pots, VoiceManager* voices,
               plaits::Modulations* modulations) {
     encoders_ = encoders;
     display_ = display;
     pots_ = pots;
-    patch_ = patch;
-    patch2_ = patch2;
-    patch3_ = patch3;
-    patch4_ = patch4;
-    voice_ = voice;
-    voice2_ = voice2;
-    voice3_ = voice3;
-    voice4_ = voice4;
+    voice_manager_ = voices;
     modulations_ = modulations;
+
+    // Инициализируем массивы указателей на патчи и голоса
+    for(size_t i = 0; i < NUM_VOICES; i++) {
+        auto& voice_unit = voices->GetVoice(i);
+        patches_[i] = &voice_unit.patch;
+        voices_[i] = &voice_unit.voice;
+    }
 
     system_clock.Init();
     encoders_->set_sensitivity(2);
@@ -199,10 +196,7 @@ void Ui::InitPages() {
     // Инициализация всех страниц
     for(int i = 0; i < PAGE_LAST; i++) {
         if(pages_[i]) {
-            pages_[i]->SetContext(
-                patch_, patch2_, patch3_, patch4_,  // Все патчи
-                voice_, voice2_, voice3_, voice4_,  // Все голоса
-                modulations_, display_);
+            pages_[i]->SetContext(patches_, voices_, modulations_, display_);
             pages_[i]->OnInit();
         }
     }

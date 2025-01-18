@@ -40,24 +40,14 @@ class UiPage {
   }
   virtual void UpdateDisplay() = 0;
 
-  void SetContext(plaits::Patch* patch, 
-                 plaits::Patch* patch2,
-                 plaits::Patch* patch3,
-                 plaits::Patch* patch4,
-                 plaits::Voice* voice,
-                 plaits::Voice* voice2,
-                 plaits::Voice* voice3,
-                 plaits::Voice* voice4,
+  void SetContext(plaits::Patch** patches,
+                 plaits::Voice** voices,
                  plaits::Modulations* mods,
                  DisplayController* display) {
-    patch_ = patch;
-    patch2_ = patch2;
-    patch3_ = patch3;
-    patch4_ = patch4;
-    voice_ = voice;
-    voice2_ = voice2;
-    voice3_ = voice3;
-    voice4_ = voice4;
+    for(size_t i = 0; i < NUM_VOICES; i++) {
+        patches_[i] = patches[i];
+        voices_[i] = voices[i];
+    }
     modulations_ = mods;
     display_ = display;
   }
@@ -66,14 +56,9 @@ class UiPage {
   EditMode edit_mode_{EDIT_IDLE};
   int8_t active_control_{0};
   
-  plaits::Patch* patch_{nullptr};
-  plaits::Patch* patch2_{nullptr};
-  plaits::Patch* patch3_{nullptr};
-  plaits::Patch* patch4_{nullptr};
-  plaits::Voice* voice_{nullptr};
-  plaits::Voice* voice2_{nullptr};
-  plaits::Voice* voice3_{nullptr};
-  plaits::Voice* voice4_{nullptr};
+  static constexpr size_t NUM_VOICES = 4;
+  plaits::Patch* patches_[NUM_VOICES]{nullptr};
+  plaits::Voice* voices_[NUM_VOICES]{nullptr};
   plaits::Modulations* modulations_{nullptr};
   DisplayController* display_{nullptr};
 };
