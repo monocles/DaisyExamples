@@ -16,15 +16,14 @@ using namespace stmlib;
 // Типы страниц UI
 enum UiPageNumber {
   PAGE_PERFORMANCE,
-  PAGE_SYNTH_EDIT,
-  PAGE_CONFIG,
+  PAGE_PITCH,  // Добавляем новую страницу
   PAGE_LAST
 };
 
 class Ui {
  public:
   Ui() {}
-  ~Ui() {}
+  ~Ui() = default;  // Используем = default вместо пустой реализации
   void Init(EncoderController* encoders, 
             DisplayController* display, 
             PotController* pots,
@@ -61,4 +60,8 @@ class Ui {
   // Page management  
   t8synth::UiPage* current_page_{nullptr};
   t8synth::UiPage* pages_[PAGE_LAST];
+
+  // // Добавляем переменные для контроля частоты обновления дисплея
+  // uint32_t last_display_update_{0};
+  // static constexpr uint32_t DISPLAY_UPDATE_INTERVAL = 16; // ~60Hz
 };

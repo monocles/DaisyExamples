@@ -28,14 +28,18 @@ void DisplayController::Init(DaisySeed& hw, SpiManager& spi_manager) {
 }
 
 void DisplayController::WriteCommand(uint8_t cmd) {
+    // __disable_irq();
     dsy_gpio_write(&dc_pin_, 0);                           // DC low for command
     // cmd_buffer_[0] = cmd;
     spi_manager_->Transmit(SpiManager::DEVICE_DISPLAY, &cmd, 1);
+    // __enable_irq();
 }
 
 void DisplayController::WriteData(uint8_t data) {
+    // __disable_irq();
     dsy_gpio_write(&dc_pin_, 1);                           // DC high for data
     spi_manager_->Transmit(SpiManager::DEVICE_DISPLAY, &data, 1);
+    // __enable_irq();
 }
 
 void DisplayController::InitOled() {

@@ -46,15 +46,15 @@ void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, s
 {
 	// loadMeter.OnBlockStart();
 	encoders.UpdateHardware();  // Только SPI операции
-
+  	// pots.Update();
 	// Читаем сглаженные значения потенциометров
 	patch.harmonics = pots.GetPotValue(0);
     patch.timbre = pots.GetPotValue(1);
     patch.morph = pots.GetPotValue(2);
 
-	float pitch = -3.0f;  // Смещение на 2 октавы вниз от C4
+	// float pitch = -3.0f;  // Смещение на 2 октавы вниз от C4
 
-	patch.note = 60.f + pitch * 12.f;
+	// patch.note = 60.f + pitch * 12.f;
 	patch.lpg_colour =  pots.GetPotValue(3);
 
 	patch.decay =  pots.GetPotValue(4);
@@ -67,7 +67,7 @@ void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, s
 	modulations.note = voct;
 
 	// modulations.trigger = 0.f;
-	modulations.trigger_patched = true;
+	// modulations.trigger_patched = true;
 
 	voice.Render(patch, modulations, outputPlaits, size);
 	for (size_t i = 0; i < size; i++)
@@ -94,7 +94,7 @@ int main(void)
 	hw.Init(true);
 	hw.SetAudioBlockSize(BLOCK_SIZE); // number of samples handled per callback
 	hw.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_48KHZ);
-  	// hw.StartLog();
+  	hw.StartLog();
     // loadMeter.Init(hw.AudioSampleRate(), BLOCK_SIZE);
 	InitPollTimer();
 

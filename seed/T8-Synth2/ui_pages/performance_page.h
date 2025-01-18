@@ -25,6 +25,7 @@ class PerformancePage : public UiPage {
   int8_t current_menu_item_{0};
   bool is_active_{false};
   region menu_region_;
+  region test_region_;
   bool needs_redraw_{false}; // Add flag for redraw request
   
   static constexpr uint8_t NUM_ENGINES = 3;  // Move NUM_ENGINES inside the class

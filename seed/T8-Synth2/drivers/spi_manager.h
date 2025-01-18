@@ -15,12 +15,7 @@ public:
     }
 
     SpiHandle::Result Transmit(uint8_t device, uint8_t* data, size_t size) {
-        // if (device != current_device_) return SpiHandle::Result::ERR;
-        // if (device == 0) {
-        //     seed_->PrintLine("Transmitting to device %d times %d", device, count);
-        //     count++;
-        // }
-        return spi_.BlockingTransmit(device, data, size); // Вернули передачу device=0
+       return spi_.BlockingTransmit(device, data, size);
     }
 
 

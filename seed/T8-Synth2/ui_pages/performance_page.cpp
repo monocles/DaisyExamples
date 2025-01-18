@@ -20,8 +20,31 @@ void PerformancePage::OnInit() {
   menu_region_.x = 0;
   menu_region_.y = 0;
   region_alloc(&menu_region_);  // Remove check since function returns void
-  UpdateDisplay();
-  needs_redraw_ = true;
+  display_->DrawRegion(64, 64, test_region_.w, test_region_.h, test_region_.data);
+
+  // Измените размер региона для большего шрифта
+  test_region_.w = 64;
+  test_region_.h = 64;
+  test_region_.x = 64;
+  test_region_.y = 0;
+  
+  region_alloc(&test_region_);
+  
+  // Очистите регион перед отрисовкой
+  region_fill(&test_region_, 0x0);
+  
+  // Используйте правильные отступы для большего шрифта
+  region_string_font2(&test_region_, "123 TEST", 0, 0, 0xf, 0x0);
+  
+  // Обновите отображение
+  display_->DrawRegion(test_region_.x, test_region_.y, 
+                      test_region_.w, test_region_.h, 
+                      test_region_.data);
+                      
+  // needs_redraw_ = true;
+
+  // UpdateDisplay();
+  // needs_redraw_ = true;
 }
 
 void PerformancePage::OnEncoder(uint8_t encoder, int32_t increment) {
@@ -74,7 +97,7 @@ void PerformancePage::UpdateDisplay() {
     if(menu_index == current_menu_item_) {
       region_fill_part(&menu_region_, 
                        item_y * menu_region_.w,
-                       16 * menu_region_.w,    
+                       14 * menu_region_.w,    
                        0xf);
       region_string(&menu_region_, 
                      menu_items_[menu_index], 
@@ -89,10 +112,18 @@ void PerformancePage::UpdateDisplay() {
   menu_region_.dirty = 1;
   needs_redraw_ = false;  // Clear redraw flag
   display_->DrawRegion(0, 0, menu_region_.w, menu_region_.h, menu_region_.data);
+
+  // Перерисовываем тестовый регион при каждом обновлении
+  display_->DrawRegion(test_region_.x, test_region_.y,
+                      test_region_.w, test_region_.h,
+                      test_region_.data);
+                      
+  needs_redraw_ = false;
 }
 
 void PerformancePage::OnEnterPage() {
   is_active_ = true;
+  needs_redraw_ = true;
   UpdateDisplay();
 }
 

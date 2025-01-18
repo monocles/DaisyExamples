@@ -1,6 +1,7 @@
 #include "ui.h"
 #include "stmlib/system/system_clock.h"
 #include "ui_pages/performance_page.h"
+#include "ui_pages/pitch_page.h"
 
 const int32_t kLongPressDuration = 1000;
 
@@ -78,65 +79,94 @@ void Ui::Poll() {
       }
   }
 
-  // Update display at fixed interval
-  if ((sub_clock_ & 1) == 0) {
-    if(current_page_) {
-      current_page_->UpdateDisplay();  // Let page handle its own display update
-    }
-  }
+  // Удаляем обновление дисплея из Poll()
 }
 
 void Ui::ShowPage(UiPageNumber page) {
-  if(current_page_) {
-    current_page_->OnExitPage();
-  }
-  
-  current_page_ = pages_[page];
-  
-  if(current_page_) {
-    current_page_->OnEnterPage();
-    current_page_->UpdateDisplay();
-  }
+    if(current_page_) {
+        pots_->Freeze();
+        current_page_->OnExitPage();
+    }
+    
+    FlushEvents();
+    current_page_ = pages_[page];
+    
+    if(current_page_) {
+        // Очищаем весь дисплей используя правильный метод
+        // display_->ScreenSetRect(0, 0, 128, 64);
+        // display_->ScreenClear();
+        
+        current_page_->OnEnterPage();
+        // Обновляем дисплей сразу после входа на страницу
+        current_page_->UpdateDisplay();
+        
+        pots_->Unfreeze();
+    }
 }
 
 void Ui::HandlePageEvent(const Event& e) {
-  if(!current_page_) return;
-  
-  switch(e.control_type) {
-    case CONTROL_ENCODER:
-      current_page_->OnEncoder(e.control_id, e.data);
-      break;
-      
-    case CONTROL_ENCODER_CLICK:
-      current_page_->OnClick(e.control_id);
-      break;
-      
-    case CONTROL_ENCODER_LONG_CLICK:
-      current_page_->OnLongClick(e.control_id);
-      break;
-      
-    case CONTROL_SWITCH:
-    case CONTROL_SWITCH_HOLD:
-      if(e.control_id == 1 && e.data > 0) {
-        ShowPage(PAGE_PERFORMANCE);
-        return;
-      }
-      current_page_->OnSwitch(e.control_id, e.data > 0);
-      break;
-  }
+    if(!current_page_) return;
+    
+    switch(e.control_type) {
+        case CONTROL_ENCODER:
+            current_page_->OnEncoder(e.control_id, e.data);
+            break;
+            
+        case CONTROL_ENCODER_CLICK:
+            current_page_->OnClick(e.control_id);
+            break;
+            
+        case CONTROL_ENCODER_LONG_CLICK:
+            current_page_->OnLongClick(e.control_id);
+            break;
+            
+        case CONTROL_SWITCH:
+            if(e.control_id == 4) {
+                ShowPage(PAGE_PITCH);
+                return;
+            }
+            if(e.control_id == 5) {
+                ShowPage(PAGE_PERFORMANCE);
+                return;
+            }
+            current_page_->OnSwitch(e.control_id, e.data > 0);
+            break;
+
+        // Добавляем обработку остальных событий
+        case CONTROL_POT:
+        case CONTROL_SWITCH_HOLD:
+        case CONTROL_REFRESH:
+            // Игнорируем эти события
+            break;
+    }
 }
 
 void Ui::DoEvents() {
-  while (queue_.available()) {
-    HandlePageEvent(queue_.PullEvent());
-  }
+    // static uint32_t next_display_update = 0;
+    // uint32_t now = system_clock.milliseconds();
 
-  if (queue_.idle_time() > 1000) {
-    queue_.Touch();
-    if(current_page_) {
-      current_page_->OnIdle();
+    while (queue_.available()) {
+        HandlePageEvent(queue_.PullEvent());
     }
-  }
+
+    if (queue_.idle_time() > 1000) {
+        queue_.Touch();
+        if(current_page_) {
+            current_page_->OnIdle();
+        }
+    }
+
+    // if(current_page_ && now >= next_display_update && pots_->IsFullySampled()) {
+    //     current_page_->UpdateDisplay();
+    //     next_display_update = now + DISPLAY_UPDATE_INTERVAL;
+    //     System::DelayUs(50);
+    // }
+    if(current_page_ && pots_->IsFullySampled()) {
+        current_page_->UpdateDisplay();
+        // next_display_update = now + DISPLAY_UPDATE_INTERVAL;
+        // System::DelayUs(50);
+    }
+
 }
 
 void Ui::FlushEvents() {
@@ -144,12 +174,30 @@ void Ui::FlushEvents() {
 }
 
 void Ui::InitPages() {
-  pages_[PAGE_PERFORMANCE] = new t8synth::PerformancePage();
-  // Initialize other pages when added
-  
-  current_page_ = pages_[PAGE_PERFORMANCE];
-  if(current_page_) {
-    current_page_->SetContext(patch_, voice_, modulations_, display_);
-    current_page_->OnInit();
-  }
+    // Очищаем массив страниц
+    for(int i = 0; i < PAGE_LAST; i++) {
+        pages_[i] = nullptr;
+    }
+
+    // Статическое создание страниц
+    static t8synth::PerformancePage performance_page;
+    static t8synth::PitchPage pitch_page;
+
+    // Настройка указателей на страницы
+    pages_[PAGE_PERFORMANCE] = &performance_page;
+    pages_[PAGE_PITCH] = &pitch_page;
+
+    // Инициализация всех страниц
+    for(int i = 0; i < PAGE_LAST; i++) {
+        if(pages_[i]) {
+            pages_[i]->SetContext(patch_, voice_, modulations_, display_);
+            pages_[i]->OnInit();
+        }
+    }
+
+    // Установка начальной страницы
+    current_page_ = pages_[PAGE_PERFORMANCE];
+    if(current_page_) {
+        current_page_->OnEnterPage();
+    }
 }

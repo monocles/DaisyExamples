@@ -85,6 +85,19 @@ public:
         System::DelayUs(100); // Увеличенная задержка при инициализации
     }
 
+    // Добавляем методы для заморозки/разморозки значений
+    void Freeze() {
+        is_frozen_ = true;
+        // Сохраняем текущие значения
+        memcpy(frozen_values_, pot_values_, sizeof(float) * NUM_POTS);
+    }
+
+    void Unfreeze() {
+        is_frozen_ = false;
+        // Ждем, пока новые значения не будут близки к замороженным
+        waiting_for_catch_up_ = true;
+    }
+
     // Кэшируем часто используемые значения в регистрах
     inline void Update() {
         register const uint8_t curr_state = state_;
@@ -92,8 +105,8 @@ public:
         
         switch(curr_state) {
             case STATE_IDLE:
-                state_ = STATE_SWITCHING;
                 SelectMuxChannel(curr_channel);
+                state_ = STATE_SWITCHING;
                 break;
 
             case STATE_SWITCHING:
@@ -104,20 +117,35 @@ public:
                 state_ = STATE_READING;
                 break;
 
-            case STATE_READING:
-                // Считываем с одного ADC пина для всех потенциометров
+            case STATE_READING: {
                 float new_value = seed_->adc.GetFloat(0);
-                float current = pot_values_[current_channel_];
                 
-                // Применяем только гистерезис
-                if(fabsf(new_value - current) > HYSTERESIS_THRESHOLD) {
-                    pot_values_[current_channel_] = new_value;
+                if(!is_frozen_) {
+                    if(waiting_for_catch_up_) {
+                        // Проверяем, близко ли новое значение к замороженному
+                        if(fabsf(new_value - frozen_values_[current_channel_]) < 0.01f) {
+                            pot_values_[current_channel_] = new_value;
+                        }
+                        // Проверяем, все ли значения синхронизированы
+                        bool all_caught_up = true;
+                        for(uint8_t i = 0; i < NUM_POTS; i++) {
+                            if(fabsf(pot_values_[i] - frozen_values_[i]) >= 0.01f) {
+                                all_caught_up = false;
+                                break;
+                            }
+                        }
+                        if(all_caught_up) {
+                            waiting_for_catch_up_ = false;
+                        }
+                    } else {
+                        pot_values_[current_channel_] = new_value;
+                    }
                 }
                 
-                // Переходим к следующему каналу
-                current_channel_ = (curr_channel + 1) & 0x1F; // % 32
+                current_channel_ = (curr_channel + 1) & 0x1F;
                 state_ = STATE_IDLE;
                 break;
+            }
         }
     }
 
@@ -127,14 +155,23 @@ public:
         
         const index_t analog_idx = ANALOG_POT_INDEXES[pot_idx];
         const index_t physical_idx = POT_MAP[analog_idx];
-        const float raw_value = 1.f - pot_values_[physical_idx];
         
-        // Применяем фильтр fonepole к значению
-        float& smoothed = smoothed_values_[pot_idx];
-        constexpr float kCoeff = 0.05f; // Коэффициент сглаживания (меньше = плавнее)
-        smoothed += (raw_value - smoothed) * kCoeff;
+        // Получаем текущее значение
+        float current_value;
+        if(is_frozen_ || (waiting_for_catch_up_ && 
+           fabsf(pot_values_[physical_idx] - frozen_values_[physical_idx]) >= 0.01f)) {
+            current_value = frozen_values_[physical_idx];
+        } else {
+            current_value = pot_values_[physical_idx];
+        }
+
+        // Применяем сглаживание
+        float& smoothed = smoothed_values_[physical_idx];
+        if(fabsf(current_value - smoothed) > HYSTERESIS_THRESHOLD) {
+            smoothed += (current_value - smoothed) * SMOOTHING_FACTOR;
+        }
         
-        return (smoothed >= 0.995f) ? 1.f : smoothed;
+        return 1.f - smoothed;
     }
 
     inline bool GetButtonValue(uint8_t btn_idx) const {
@@ -162,11 +199,29 @@ public:
 
     // Добавляем новый метод для проверки полного сканирования
     inline bool IsFullySampled() const {
+        // return (current_channel_ >= NUM_POTS-1) && (state_ == STATE_READING);
         return current_channel_ == 0 && state_ == STATE_IDLE;
     }
 
+    // Добавляем метод сброса состояния
+    void Reset() {
+        // __disable_irq();
+        current_channel_ = 0;
+        state_ = STATE_IDLE;
+        
+        // Сбрасываем значения сглаживания
+        for(uint8_t i = 0; i < NUM_ANALOG_POTS; ++i) {
+            pot_values_[i] = 0.0f;
+        }
+        // __enable_irq();
+        
+        // Сбрасываем мультиплексор
+        SelectMuxChannel(0);
+        // System::DelayUs(100);
+    }
+
 private:
-    static constexpr float HYSTERESIS_THRESHOLD = 0.002f;  // Порог гистерезиса 0.2%
+    // Увеличиваем порог гистерезиса для большей стабильности
 
     inline void SelectMuxChannel(uint8_t channel) {
         static constexpr uint8_t CHANNEL_MASK = 0x0F;
@@ -182,14 +237,21 @@ private:
         spi_manager_->Transmit(SpiManager::DEVICE_POTS, mux_data, 2);        
     }
 
+    // Константы для сглаживания
+    static constexpr float SMOOTHING_FACTOR = 0.03f;    // Коэффициент сглаживания
+    static constexpr float HYSTERESIS_THRESHOLD = 0.005f; // Порог гистерезиса 0.2%
+
     // Выравнивание данных для оптимального доступа к памяти
     DaisySeed* seed_;
     SpiManager* spi_manager_;
-    float pot_values_[NUM_POTS];
+    mutable float pot_values_[NUM_POTS];
     // Используем volatile для регистров состояния
     volatile uint8_t current_channel_;
     volatile uint8_t state_;
-    mutable float smoothed_values_[NUM_ANALOG_POTS]{};  // Хранение сглаженных значений
+    bool is_frozen_{false};
+    bool waiting_for_catch_up_{false};
+    float frozen_values_[NUM_POTS]{};
+    mutable float smoothed_values_[NUM_POTS]{};  // Массив сглаженных значений
 };
 
 
