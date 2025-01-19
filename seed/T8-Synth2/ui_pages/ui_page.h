@@ -44,23 +44,23 @@ class UiPage {
                  plaits::Voice** voices,
                  plaits::Modulations* mods,
                  DisplayController* display) {
-    for(size_t i = 0; i < NUM_VOICES; i++) {
-        patches_[i] = patches[i];
-        voices_[i] = voices[i];
-    }
+    patches_ = patches;
+    voices_ = voices;
     modulations_ = mods;
     display_ = display;
+    // Увеличиваем NUM_VOICES до 8
+    NUM_VOICES = 8;
   }
 
  protected:
   EditMode edit_mode_{EDIT_IDLE};
   int8_t active_control_{0};
   
-  static constexpr size_t NUM_VOICES = 4;
-  plaits::Patch* patches_[NUM_VOICES]{nullptr};
-  plaits::Voice* voices_[NUM_VOICES]{nullptr};
+  plaits::Patch** patches_{nullptr};
+  plaits::Voice** voices_{nullptr};
   plaits::Modulations* modulations_{nullptr};
   DisplayController* display_{nullptr};
+  size_t NUM_VOICES{4};  // Делаем переменной
 };
 
 }  // namespace t8synth

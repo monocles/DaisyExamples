@@ -2,6 +2,7 @@
 
 #include "ui_page.h"
 #include "../drivers/region.h"
+#include "../drivers/encoder_controller.h" // Добавляем этот инклюд
 
 namespace t8synth {
 

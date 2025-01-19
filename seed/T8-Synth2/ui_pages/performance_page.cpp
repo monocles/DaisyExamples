@@ -121,9 +121,9 @@ void PerformancePage::UpdateDisplay() {
   display_->DrawRegion(0, 0, menu_region_.w, menu_region_.h, menu_region_.data);
 
   // Перерисовываем тестовый регион при каждом обновлении
-  display_->DrawRegion(test_region_.x, test_region_.y,
-                      test_region_.w, test_region_.h,
-                      test_region_.data);
+  // display_->DrawRegion(test_region_.x, test_region_.y,
+  //                     test_region_.w, test_region_.h,
+  //                     test_region_.data);
                       
   needs_redraw_ = false;
 }

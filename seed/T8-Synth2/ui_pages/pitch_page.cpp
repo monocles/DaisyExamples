@@ -147,50 +147,50 @@ void PitchPage::DrawNotes() {
 }
 
 void PitchPage::UpdateNoteByEncoder(uint8_t encoder, int32_t increment) {
-  if(encoder >= 8) return; // Обрабатываем 8 энкодеров (4 левых + 4 правых)
-  
-  Note& current_note = encoder < 4 ? left_notes_[encoder] : right_notes_[encoder - 4];
-  uint8_t current_index = GetIndexFromNote(current_note);
-  
-  int new_index = current_index + increment;
-  if(new_index < 0) new_index = 0;
-  uint8_t max_index = (MAX_OCTAVE - MIN_OCTAVE + 1) * NOTES_PER_OCTAVE - 1;
-  if(new_index > max_index) new_index = max_index;
-  
-  GetNoteFromIndex(new_index, current_note);
-  needs_redraw_ = true;
+    Note& current_note = encoder < 4 ? left_notes_[encoder] : right_notes_[encoder - 4];
+    uint8_t current_index = GetIndexFromNote(current_note);
+    
+    int new_index = current_index + increment;
+    if(new_index < 0) new_index = 0;
+    uint8_t max_index = (MAX_OCTAVE - MIN_OCTAVE + 1) * NOTES_PER_OCTAVE - 1;
+    if(new_index > max_index) new_index = max_index;
+    
+    GetNoteFromIndex(new_index, current_note);
+    needs_redraw_ = true;
 }
 
 void PitchPage::OnEncoder(uint8_t encoder, int32_t increment) {
     if(!is_active_) return;
+
+    using ENC = EncoderController::EncoderIndex;
     
-    if(encoder < 4) {
+    // Обрабатываем энкодеры голосов (0-7)
+    if(encoder < 8) {
+        bool is_right_group = encoder >= 4;
+        uint8_t voice_index = is_right_group ? encoder - 4 : encoder;
+        Note& current_note = is_right_group ? right_notes_[voice_index] : left_notes_[voice_index];
+        uint8_t patch_index = is_right_group ? voice_index + 4 : voice_index;
+        
         UpdateNoteByEncoder(encoder, increment);
         note_region_.dirty = 1;
-        
-        // Используем индексы массива
-        if(encoder < NUM_VOICES) {
-            UpdatePatchNote(left_notes_[encoder], patches_[encoder]);
-        }
+        UpdatePatchNote(current_note, patches_[patch_index]);
     }
-    else if(encoder >= 7 && encoder <= 10) {
-        UpdateNoteByEncoder(encoder - 7 + 4, increment);
-    }
-    else if(encoder == 5) {
+    // Обработка модуляционных энкодеров
+    else if(encoder == ENC::ENC_MOD_A) {
         footer_value_a_ = fclamp(footer_value_a_ + increment, -12, 12);
         UpdateFooterValues();
-        footer_region_.dirty = 1;  // Используем встроенный флаг региона
+        footer_region_.dirty = 1;
         
-        // При изменении footer_value_a_ обновляем все 4 голоса
-        UpdatePatchNote(left_notes_[0], patches_[0]);
-        UpdatePatchNote(left_notes_[1], patches_[1]);
-        UpdatePatchNote(left_notes_[2], patches_[2]);
-        UpdatePatchNote(left_notes_[3], patches_[3]);
+        // Обновляем все 8 голосов при изменении footer_value_a_
+        for(uint8_t i = 0; i < NUM_VOICES; i++) {
+            Note& note = i < 4 ? left_notes_[i] : right_notes_[i-4];
+            UpdatePatchNote(note, patches_[i]);
+        }
     }
-    else if(encoder == 6) {
+    else if(encoder == ENC::ENC_MOD_B) {
         footer_value_b_ = fclamp(footer_value_b_ + increment, -12, 12);
         UpdateFooterValues();
-        footer_region_.dirty = 1;  // Используем встроенный флаг региона
+        footer_region_.dirty = 1;
     }
     
     needs_redraw_ = true;
@@ -322,7 +322,12 @@ uint8_t PitchPage::GetIndexFromNote(const Note& note) {
 }
 
 void PitchPage::RenderNote(const Note& note, uint32_t x_offset, uint32_t y_offset) {
-  char note_str[3] = {note.base, '0' + note.octave, 0};
+    // Используем правильное приведение типов
+    char note_str[3] = {
+        note.base, 
+        static_cast<char>('0' + note.octave), 
+        0
+    };
   
   // Подвигаем ноты ближе к нижней части региона
   uint32_t text_y = note_region_.h - 8; // 8 пикселей от низа

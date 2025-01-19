@@ -50,21 +50,26 @@ void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, s
     voice_manager.SetCommonParameter(&plaits::Patch::decay, pots.GetPotValue(4));
 
     Voice::Frame outputs[VoiceManager::NUM_VOICES][BLOCK_SIZE];
-    // float mix = 0.0f;
 
-    // Рендеринг и микширование голосов
+    // Рендеринг голосов
     for(size_t v = 0; v < VoiceManager::NUM_VOICES; v++) {
         auto& voice_unit = voice_manager.GetVoice(v);
         voice_unit.voice.Render(voice_unit.patch, modulations, outputs[v], size);
     }
 
-    // Микширование
+    // Раздельное микширование основного и вспомогательного выходов
     for(size_t i = 0; i < size; i++) {
-        float mix = 0.0f;
+        float mix_main = 0.0f;
+        float mix_aux = 0.0f;
+        
         for(size_t v = 0; v < VoiceManager::NUM_VOICES; v++) {
-            mix += outputs[v][i].out;
+            mix_main += outputs[v][i].out;
+            mix_aux += outputs[v][i].aux;
         }
-        OUT_L[i] = OUT_R[i] = mix / (VoiceManager::NUM_VOICES * 32768.0f);
+        
+        // Нормализуем каждый канал отдельно
+        OUT_L[i] = mix_main / (VoiceManager::NUM_VOICES * 32768.0f);
+        OUT_R[i] = mix_aux / (VoiceManager::NUM_VOICES * 32768.0f);
     }
 }
 
@@ -84,7 +89,7 @@ int main(void)
 	hw.Init(true);
 	hw.SetAudioBlockSize(BLOCK_SIZE); // number of samples handled per callback
 	hw.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_48KHZ);
-  	hw.StartLog();
+  	// hw.StartLog();
     // loadMeter.Init(hw.AudioSampleRate(), BLOCK_SIZE);
 	InitPollTimer();
 

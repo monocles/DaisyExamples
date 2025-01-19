@@ -14,8 +14,8 @@ void Ui::Init(EncoderController* encoders, DisplayController* display,
     voice_manager_ = voices;
     modulations_ = modulations;
 
-    // Инициализируем массивы указателей на патчи и голоса
-    for(size_t i = 0; i < NUM_VOICES; i++) {
+    // Инициализируем массивы указателей на все 8 голосов
+    for(size_t i = 0; i < VoiceManager::NUM_VOICES; i++) {
         auto& voice_unit = voices->GetVoice(i);
         patches_[i] = &voice_unit.patch;
         voices_[i] = &voice_unit.voice;
@@ -49,26 +49,25 @@ void Ui::Poll() {
   encoders_->ProcessEncoders(); 
   encoders_->ProcessButtons();  
 
-  // Handle encoders
-  for(uint8_t i = 0; i < EncoderController::NUM_ENCODERS; ++i) {
-      int32_t increment = encoders_->increment(i);
-      if(increment != 0) {
+  // Handle encoders using new mapping with ENC_LAST
+  for(uint8_t i = 0; i < EncoderController::ENC_LAST; ++i) {
+      if(auto increment = (*encoders_)[i].increment()) {
           queue_.AddEvent(CONTROL_ENCODER, i, increment);
       }
 
       // Handle encoder button states
-      if(encoders_->just_pressed(i) && !encoder_pressed_[i]) {
+      if((*encoders_)[i].just_pressed() && !encoder_pressed_[i]) {
           encoder_pressed_[i] = true;
           encoder_press_time_[i] = now;
           encoder_long_press_event_sent_[i] = false;
       } 
-      else if(encoders_->pressed(i) && encoder_pressed_[i] && !encoder_long_press_event_sent_[i]) {
+      else if((*encoders_)[i].pressed() && encoder_pressed_[i] && !encoder_long_press_event_sent_[i]) {
           if(now - encoder_press_time_[i] >= kLongPressDuration) {
               queue_.AddEvent(CONTROL_ENCODER_LONG_CLICK, i, 0);
               encoder_long_press_event_sent_[i] = true;
           }
       }
-      else if(encoders_->released(i) && encoder_pressed_[i]) {
+      else if((*encoders_)[i].released() && encoder_pressed_[i]) {
           encoder_pressed_[i] = false;
           if(!encoder_long_press_event_sent_[i]) {
               queue_.AddEvent(CONTROL_ENCODER_CLICK, i, 0);
@@ -115,14 +114,17 @@ void Ui::HandlePageEvent(const Event& e) {
     
     switch(e.control_type) {
         case CONTROL_ENCODER:
+            hw.PrintLine("Encoder %d: %d", e.control_id, e.data);
             current_page_->OnEncoder(e.control_id, e.data);
             break;
             
         case CONTROL_ENCODER_CLICK:
+            hw.PrintLine("Encoder %d: Click", e.control_id);
             current_page_->OnClick(e.control_id);
             break;
             
         case CONTROL_ENCODER_LONG_CLICK:
+            hw.PrintLine("Encoder %d: Long Click", e.control_id);
             current_page_->OnLongClick(e.control_id);
             break;
             

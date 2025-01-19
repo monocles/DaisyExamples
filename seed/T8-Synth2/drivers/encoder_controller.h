@@ -78,6 +78,62 @@ public:
 
     bool GetButtonState(uint8_t button_index) const;  // Add declaration
 
+    // Именованные константы для энкодеров
+    enum EncoderIndex {
+        // Группа A (0-3)
+        ENC_1_A = 0,
+        ENC_2_A = 1,
+        ENC_3_A = 2,
+        ENC_4_A = 3,
+        // Группа B (4-7)
+        ENC_1_B = 4,
+        ENC_2_B = 5,
+        ENC_3_B = 6,
+        ENC_4_B = 7,
+        // Служебные энкодеры (8-10)
+        ENC_MOD_A = 8,
+        ENC_MOD_B = 9,
+        ENC_DATA = 10,
+        // Маркер конца перечисления
+        ENC_LAST
+    };
+
+    // Класс для доступа к энкодеру через operator[]
+    class EncoderAccess {
+    public:
+        EncoderAccess(EncoderController& controller, uint8_t logical_index) 
+            : controller_(controller), logical_index_(logical_index) {}
+
+        bool just_pressed() const { 
+            return controller_.just_pressed(controller_.MapLogicalToPhysical(logical_index_)); 
+        }
+        
+        bool pressed() const { 
+            return controller_.pressed(controller_.MapLogicalToPhysical(logical_index_)); 
+        }
+        
+        bool released() const { 
+            return controller_.released(controller_.MapLogicalToPhysical(logical_index_)); 
+        }
+        
+        int32_t increment() const { 
+            return controller_.increment(controller_.MapLogicalToPhysical(logical_index_)); 
+        }
+        
+    private:
+        EncoderController& controller_;
+        uint8_t logical_index_;
+    };
+
+    // Операторы [] для доступа к энкодерам
+    EncoderAccess operator[](uint8_t index) {
+        return EncoderAccess(*this, index);
+    }
+
+    EncoderAccess operator[](EncoderIndex index) {
+        return EncoderAccess(*this, static_cast<uint8_t>(index));
+    }
+
 private:
     static constexpr uint8_t MCP23S17_ADDR = 0x40;
     static constexpr uint8_t MCP_READ = 0x01;
@@ -136,4 +192,36 @@ private:
 
     uint8_t sensitivity_divisor_{1};  // Default sensitivity divisor
     int8_t step_accumulator_[NUM_ENCODERS]{};  // Accumulated steps
+
+    // Маппинг логического индекса в физический
+    uint8_t MapLogicalToPhysical(uint8_t logical_index) const {
+        if(logical_index <= 3) {
+            return logical_index; // 0-3 -> 0-3 (ENC_1_A - ENC_4_A)
+        }
+        else if(logical_index <= 7) {
+            return logical_index + 3; // 4-7 -> 7-10 (ENC_1_B - ENC_4_B)
+        }
+        else switch(logical_index) {
+            case ENC_MOD_A: return 5;  // 8 -> 5
+            case ENC_MOD_B: return 6;  // 9 -> 6
+            case ENC_DATA:  return 4;  // 10 -> 4
+            default: return logical_index;
+        }
+    }
+
+    // Маппинг физического индекса в логический
+    uint8_t MapPhysicalToLogical(uint8_t physical_index) const {
+        if(physical_index <= 3) {
+            return physical_index; // 0-3 -> 0-3 (ENC_1_A - ENC_4_A)
+        }
+        else if(physical_index >= 7 && physical_index <= 10) {
+            return physical_index - 3; // 7-10 -> 4-7 (ENC_1_B - ENC_4_B)
+        }
+        else switch(physical_index) {
+            case 5: return ENC_MOD_A;  // 5 -> 8
+            case 6: return ENC_MOD_B;  // 6 -> 9
+            case 4: return ENC_DATA;   // 4 -> 10
+            default: return physical_index;
+        }
+    }
 };
