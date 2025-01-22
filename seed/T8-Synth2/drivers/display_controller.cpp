@@ -54,9 +54,7 @@ void DisplayController::InitOled() {
     // Initialize with new revision commands
     WriteCommand(0xAE); // off
     WriteCommand(0xB3); // clock rate
-    WriteData(0xFF);
-    // WriteData(0x31);
-
+    WriteData(0x91);
     WriteCommand(0xCA); // mux ratio
     WriteData(0x3F);
     WriteCommand(0xA2); // set offset
@@ -67,29 +65,19 @@ void DisplayController::InitOled() {
     WriteData(0x16);
     WriteData(0x11);
     WriteCommand(0xC7); // master contrast current
-    WriteData(0x0F);
-    // WriteData(0x0F);
-
+    WriteData(0x0f);
     WriteCommand(0xC1); // set contrast current
-    WriteData(130);
-    // WriteData(0x8F);
-
+    WriteData(0x9F);
     WriteCommand(0xB1); // phase length
-    WriteData(0x82);
-    // WriteData(0x72);
-
+    WriteData(0xF2);
     WriteCommand(0xBB); // set pre-charge voltage
     WriteData(0x1F);
-    // WriteData(0x20);
-
     WriteCommand(0xB4); // set vsl
     WriteData(0xA0);
     WriteData(0xFD);
     WriteCommand(0xBE); // set VCOMH
-    WriteData(0x07);
-    // WriteData(0x05);
-
-    WriteCommand(0xA6); // set inverted display
+    WriteData(0x04);
+    WriteCommand(0xA6); // set normal display
 
     ScreenSetRect(0, 0, 128, 64);
     ScreenClear();

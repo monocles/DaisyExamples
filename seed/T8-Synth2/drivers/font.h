@@ -10,7 +10,7 @@
 
 // small bitfield system font
 #define FONT_CHARW 8
-#define FONT_CHARH 6
+#define FONT_CHARH 7
 // glyph table doesn't include the initial non-ascii chars
 #define FONT_ASCII_OFFSET 0x20
 
@@ -18,11 +18,8 @@
 // #define FONT_AA_CHARW 	FONT_UME_TGO5_18_W
 // #define FONT_AA_CHARH 	FONT_UME_TGO5_18_H
 
-// Добавляем константы для второго шрифта
-// #define FONT2_CHARW 12
-// #define FONT2_CHARH 14
-#define FONT2_CHARW 9
-#define FONT2_CHARH 12
+#define FONT2_CHARW 12
+#define FONT2_CHARH 14
 #define FONT2_ASCII_OFFSET 0x20
 
 //---------------------------

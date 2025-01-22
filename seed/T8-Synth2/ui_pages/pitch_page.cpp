@@ -19,27 +19,27 @@ void PitchPage::OnInit() {
 //   UiPage::OnInit();  // Вызываем базовый метод
 
   // Инициализация основного региона дисплея
-  display_region_.w = 128;
-  display_region_.h = 9;
-  display_region_.x = 0;
-  display_region_.y = 0;
-  region_alloc(&display_region_);
+  header_region.w = 128;
+  header_region.h = 9;
+  header_region.x = 0;
+  header_region.y = 0;
+  region_alloc(&header_region);
 
   // Инициализация региона для шаблона
-  pattern_region_.w = 128;  
-  pattern_region_.h = 24;
-  pattern_region_.x = 0; 
-  pattern_region_.y = 9; // Располагаем под display_region
-  region_alloc(&pattern_region_);
+  slider_region.w = 128;  
+  slider_region.h = 24;
+  slider_region.x = 0; 
+  slider_region.y = 9; // Располагаем под display_region
+  region_alloc(&slider_region);
   
-  region_fill(&pattern_region_, 0x0); // Очищаем регион
-  DrawPattern();
+  region_fill(&slider_region, 0x0); // Очищаем регион
+  DrawSliders();
 
   // Инициализация региона для нот
   note_region_.w = 128;
   note_region_.h = 10;
   note_region_.x = 0;
-  note_region_.y = pattern_region_.y + pattern_region_.h; // Размещаем под pattern_region
+  note_region_.y = slider_region.y + slider_region.h; // Размещаем под pattern_region
   region_alloc(&note_region_);
   
   region_fill(&note_region_, 0x0);
@@ -71,8 +71,8 @@ void PitchPage::OnInit() {
   right_notes_[3] = {.base = 'C', .octave = 4, .sharp = false};
 
   // Заполняем регион начальным содержимым
-//   region_fill(&display_region_, 0x0);
-//   region_string_font2(&display_region_, "PITCH PAGE", 2, 2, 0xf, 0x0);
+//   region_fill(&header_region, 0x0);
+//   region_string_font2(&header_region, "PITCH PAGE", 2, 2, 0xf, 0x0);
 
   // Инициализируем значения футера
   footer_value_a_ = 0;
@@ -80,19 +80,19 @@ void PitchPage::OnInit() {
   UpdateFooterValues();
 }
 
-void PitchPage::DrawPattern() {
+void PitchPage::DrawSliders() {
   static constexpr uint8_t PATTERN_HEIGHT = 16;
   static constexpr uint8_t PATTERN_SPACING = 10;  // Отступ между паттернами
   static constexpr uint8_t GROUP_SPACING = 10;    // Отступ между группами
   static constexpr uint8_t PATTERN_LEFT_OFFSET = 12;  // Начальный отступ слева
   static constexpr uint8_t NUM_PATTERNS = 4;  // Количество паттернов в группе
   
-  uint32_t start_y = pattern_region_.h - PATTERN_HEIGHT;
+  uint32_t start_y = slider_region.h - PATTERN_HEIGHT;
   
   // Рисуем первую группу из 4 паттернов
   for(uint8_t pattern = 0; pattern < NUM_PATTERNS; pattern++) {
     uint32_t x_offset = PATTERN_LEFT_OFFSET + (pattern * (3 + PATTERN_SPACING));
-    DrawSinglePattern(x_offset, start_y);
+    DrawSlider(x_offset, start_y);
   }
 
   // Рисуем вторую группу из 4 паттернов с дополнительным отступом
@@ -102,23 +102,23 @@ void PitchPage::DrawPattern() {
                                
   for(uint8_t pattern = 0; pattern < NUM_PATTERNS; pattern++) {
     uint32_t x_offset = second_group_start + (pattern * (3 + PATTERN_SPACING));
-    DrawSinglePattern(x_offset, start_y);
+    DrawSlider(x_offset, start_y);
   }
 }
 
 // Вспомогательный метод для отрисовки одного паттерна
-void PitchPage::DrawSinglePattern(uint32_t x_offset, uint32_t start_y) {
+void PitchPage::DrawSlider(uint32_t x_offset, uint32_t start_y) {
   static constexpr uint8_t PATTERN_HEIGHT = 16;
   
   for(int y = 0; y < PATTERN_HEIGHT; y++) {
-    uint32_t row_offset = (start_y + y) * pattern_region_.w + x_offset;
+    uint32_t row_offset = (start_y + y) * slider_region.w + x_offset;
     
     if(y % 2 == 0) {
-      region_fill_part(&pattern_region_, row_offset, 1, 0xFF);     // o
-      region_fill_part(&pattern_region_, row_offset + 1, 1, 0x00); // x
-      region_fill_part(&pattern_region_, row_offset + 2, 1, 0xFF); // o
+      region_fill_part(&slider_region, row_offset, 1, 0xFF);     // o
+      region_fill_part(&slider_region, row_offset + 1, 1, 0x00); // x
+      region_fill_part(&slider_region, row_offset + 2, 1, 0xFF); // o
     } else {
-      region_fill_part(&pattern_region_, row_offset, 3, 0x00);     // xxx
+      region_fill_part(&slider_region, row_offset, 3, 0x00);     // xxx
     }
   }
 }
@@ -209,19 +209,19 @@ void PitchPage::UpdateDisplay() {
 
     if(needs_redraw_) {
         // Обновляем только грязные регионы
-        if(display_region_.dirty) {
-            display_->DrawRegion(display_region_.x, display_region_.y, 
-                               display_region_.w, display_region_.h,
-                               display_region_.data);
-            display_region_.dirty = 0;
+        if(header_region.dirty) {
+            display_->DrawRegion(header_region.x, header_region.y, 
+                               header_region.w, header_region.h,
+                               header_region.data);
+            header_region.dirty = 0;
         }
         
-        if(pattern_region_.dirty) {
-            DrawPattern();
-            display_->DrawRegion(pattern_region_.x, pattern_region_.y,
-                               pattern_region_.w, pattern_region_.h, 
-                               pattern_region_.data);
-            pattern_region_.dirty = 0;
+        if(slider_region.dirty) {
+            DrawSliders();
+            display_->DrawRegion(slider_region.x, slider_region.y,
+                               slider_region.w, slider_region.h, 
+                               slider_region.data);
+            slider_region.dirty = 0;
         }
         
         if(note_region_.dirty) {
@@ -249,23 +249,23 @@ void PitchPage::OnEnterPage() {
     is_active_ = true;
     
     // При входе на страницу помечаем все регионы как грязные
-    display_region_.dirty = 1;
-    pattern_region_.dirty = 1;
+    header_region.dirty = 1;
+    slider_region.dirty = 1;
     note_region_.dirty = 1;
     footer_region_.dirty = 1;
 
     // Очищаем все регионы
-    region_fill(&display_region_, 0x0);
-    region_fill(&pattern_region_, 0x0);
+    region_fill(&header_region, 0x0);
+    region_fill(&slider_region, 0x0);
     region_fill(&note_region_, 0x0);
     region_fill(&footer_region_, 0x0);
 
     // Отрисовываем начальное содержимое
-    region_string(&display_region_, "PITCH", 2, 2, 0xf, 0x0, 0);
-    region_string(&display_region_, "C MINOR", 34, 2, 0xf, 0x0, 0);
+    region_string(&header_region, "PITCH", 2, 2, 0xf, 0x0, 0);
+    region_string(&header_region, "C MINOR", 34, 2, 0xf, 0x0, 0);
 
     // Отрисовываем все компоненты
-    DrawPattern();
+    DrawSliders();
     DrawNotes();
     DrawFooterSlider();
     UpdateFooterValues();

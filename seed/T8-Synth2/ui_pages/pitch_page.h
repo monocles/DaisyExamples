@@ -23,9 +23,9 @@ class PitchPage : public UiPage {
   
  private:
   bool is_active_{false};
-  region display_region_;
+  region header_region;
   region value_region_;
-  region pattern_region_; // Добавляем новый регион для шаблона
+  region slider_region; // Добавляем новый регион для шаблона
   region note_region_;  // Добавляем регион для отображения нот
   region footer_region_;  // Добавляем регион для футера
   bool needs_redraw_{false};
@@ -55,8 +55,8 @@ class PitchPage : public UiPage {
   uint8_t GetIndexFromNote(const Note& note);        // Получение индекса из ноты
   void RenderNote(const Note& note, uint32_t x_offset, uint32_t y_offset); // Отрисовка ноты с диезом
 
-  void DrawPattern(); // Метод для отрисовки шаблона
-  void DrawSinglePattern(uint32_t x_offset, uint32_t start_y); // Добавляем новый метод
+  void DrawSliders(); // Метод для отрисовки шаблона
+  void DrawSlider(uint32_t x_offset, uint32_t start_y); // Добавляем новый метод
   void DrawNotes();    // Метод для отрисовки нот
   void DrawFooterSlider(); // Метод для отрисовки слайдера
 
