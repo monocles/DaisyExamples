@@ -129,13 +129,19 @@ void Ui::HandlePageEvent(const Event& e) {
             break;
             
         case CONTROL_SWITCH:
-            if(e.control_id == 4) {
+            hw.PrintLine("Switch %d: %d", e.control_id, e.data);
+            using BTN = EncoderController::ButtonIndex;
+            if(e.control_id == BTN::VOICE_BUTTON) {
+                ShowPage(PAGE_PERFORMANCE);
+                return;
+            }
+            if(e.control_id == BTN::PITCH_BUTTON) {
                 ShowPage(PAGE_PITCH);
                 return;
             }
-            if(e.control_id == 5) {
-                ShowPage(PAGE_PERFORMANCE);
-                return;
+            if(e.control_id == BTN::CLEAR_BUTTON) {
+                __disable_irq();
+                daisy::System::ResetToBootloader(daisy::System::BootloaderMode::DAISY_INFINITE_TIMEOUT);
             }
             current_page_->OnSwitch(e.control_id, e.data > 0);
             break;

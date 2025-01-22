@@ -98,6 +98,33 @@ public:
         ENC_LAST
     };
 
+    // Именованные константы для кнопок
+    enum ButtonIndex {
+        // Кнопки управления воспроизведением
+        PLAY_BUTTON = 0,
+        REC_BUTTON = 1,
+        CLEAR_BUTTON = 2,
+        
+        // Кнопки страниц
+        PITCH_BUTTON = 3,
+        PERFORM_BUTTON = 4,
+        SELECT_BUTTON = 5,
+        
+        // Функциональные кнопки
+        VOICE_BUTTON = 6,
+        MOD_BUTTON = 7,
+        FX_BUTTON = 8,
+        SEQ_BUTTON = 9,
+        
+        // Маркер конца перечисления
+        BUTTON_LAST
+    };
+
+    // Добавляем методы для доступа к кнопкам по имени
+    bool GetButtonState(ButtonIndex button) const {
+        return GetButtonState(static_cast<uint8_t>(button));
+    }
+
     // Класс для доступа к энкодеру через operator[]
     class EncoderAccess {
     public:

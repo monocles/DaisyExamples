@@ -2,9 +2,11 @@
 #include "pitch_page.h"
 #include "drivers/region.h"
 #include "drivers/font.h"
+#include "stmlib/system/system_clock.h"
 
 namespace t8synth {
 using namespace daisysp;
+using namespace stmlib;
 
 // Определяем массив всех доступных нот
 const char* const PitchPage::available_notes_[] = {
