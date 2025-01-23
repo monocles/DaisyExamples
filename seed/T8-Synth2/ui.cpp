@@ -41,50 +41,55 @@ void Ui::Init(EncoderController* encoders, DisplayController* display,
 }
 
 void Ui::Poll() {
-  system_clock.Tick();
-  uint32_t now = system_clock.milliseconds();
-  ++sub_clock_;
-  
-  pots_->Update();
-  encoders_->ProcessEncoders(); 
-  encoders_->ProcessButtons();  
+    system_clock.Tick();
+    uint32_t now = system_clock.milliseconds();
+    ++sub_clock_;
+    
+    pots_->Update();
+    
+    // Обрабатываем энкодеры и кнопки только если есть новые данные
+    if(encoders_->HasNewData()) {
+        encoders_->ProcessEncoders(); 
+        encoders_->ProcessButtons();
+        encoders_->ClearNewDataFlag();  // Сбрасываем флаг после обработки
+    }
 
-  // Handle encoders using new mapping with ENC_LAST
-  for(uint8_t i = 0; i < EncoderController::ENC_LAST; ++i) {
-      if(auto increment = (*encoders_)[i].increment()) {
-          queue_.AddEvent(CONTROL_ENCODER, i, increment);
-      }
+    // Handle encoders using new mapping with ENC_LAST
+    for(uint8_t i = 0; i < EncoderController::ENC_LAST; ++i) {
+        if(auto increment = (*encoders_)[i].increment()) {
+            queue_.AddEvent(CONTROL_ENCODER, i, increment);
+        }
 
-      // Handle encoder button states
-      if((*encoders_)[i].just_pressed() && !encoder_pressed_[i]) {
-          encoder_pressed_[i] = true;
-          encoder_press_time_[i] = now;
-          encoder_long_press_event_sent_[i] = false;
-      } 
-      else if((*encoders_)[i].pressed() && encoder_pressed_[i] && !encoder_long_press_event_sent_[i]) {
-          if(now - encoder_press_time_[i] >= kLongPressDuration) {
-              queue_.AddEvent(CONTROL_ENCODER_LONG_CLICK, i, 0);
-              encoder_long_press_event_sent_[i] = true;
-          }
-      }
-      else if((*encoders_)[i].released() && encoder_pressed_[i]) {
-          encoder_pressed_[i] = false;
-          if(!encoder_long_press_event_sent_[i]) {
-              queue_.AddEvent(CONTROL_ENCODER_CLICK, i, 0);
-          }
-      }
-  }
+        // Handle encoder button states
+        if((*encoders_)[i].just_pressed() && !encoder_pressed_[i]) {
+            encoder_pressed_[i] = true;
+            encoder_press_time_[i] = now;
+            encoder_long_press_event_sent_[i] = false;
+        } 
+        else if((*encoders_)[i].pressed() && encoder_pressed_[i] && !encoder_long_press_event_sent_[i]) {
+            if(now - encoder_press_time_[i] >= kLongPressDuration) {
+                queue_.AddEvent(CONTROL_ENCODER_LONG_CLICK, i, 0);
+                encoder_long_press_event_sent_[i] = true;
+            }
+        }
+        else if((*encoders_)[i].released() && encoder_pressed_[i]) {
+            encoder_pressed_[i] = false;
+            if(!encoder_long_press_event_sent_[i]) {
+                queue_.AddEvent(CONTROL_ENCODER_CLICK, i, 0);
+            }
+        }
+    }
 
-  // Handle buttons
-  for(uint8_t i = 0; i < EncoderController::NUM_BUTTONS; ++i) {
-      button_states_[i] = encoders_->GetButtonState(i);
-      if(button_states_[i] != prev_button_states_[i]) {
-          queue_.AddEvent(CONTROL_SWITCH, i, button_states_[i] ? 1 : 0);
-          prev_button_states_[i] = button_states_[i];
-      }
-  }
+    // Handle buttons
+    for(uint8_t i = 0; i < EncoderController::NUM_BUTTONS; ++i) {
+        button_states_[i] = encoders_->GetButtonState(i);
+        if(button_states_[i] != prev_button_states_[i]) {
+            queue_.AddEvent(CONTROL_SWITCH, i, button_states_[i] ? 1 : 0);
+            prev_button_states_[i] = button_states_[i];
+        }
+    }
 
-  // Удаляем обновление дисплея из Poll()
+    // Удаляем обновление дисплея из Poll()
 }
 
 void Ui::ShowPage(UiPageNumber page) {

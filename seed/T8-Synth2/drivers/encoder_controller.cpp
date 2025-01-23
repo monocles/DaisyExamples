@@ -94,8 +94,8 @@ void EncoderController::Update() {
 }
 
 void EncoderController::UpdateHardware() {
-    // Используем метод Read() вместо HAL_GPIO_ReadPin
     if(interrupt_pin_.Read() == true) {  // Active LOW
+        has_new_data_ = true;  // Устанавливаем флаг новых данных
         
         // Проверяем все MCP на наличие изменений
         for(int mcp_num = 0; mcp_num < 3; mcp_num++) {

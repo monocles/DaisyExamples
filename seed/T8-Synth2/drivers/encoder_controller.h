@@ -161,6 +161,12 @@ public:
         return EncoderAccess(*this, static_cast<uint8_t>(index));
     }
 
+    // Метод для проверки наличия новых данных
+    bool HasNewData() const { return has_new_data_; }
+    
+    // Сбросить флаг новых данных после обработки
+    void ClearNewDataFlag() { has_new_data_ = false; }
+
 private:
     static constexpr uint8_t MCP23S17_ADDR = 0x40;
     static constexpr uint8_t MCP_READ = 0x01;
@@ -240,6 +246,9 @@ private:
     int8_t step_accumulator_[NUM_ENCODERS]{};  // Accumulated steps
     
     daisy::GPIO interrupt_pin_;
+
+    // Флаг наличия новых данных от прерывания
+    volatile bool has_new_data_{false};
 
     // Маппинг логического индекса в физический
     uint8_t MapLogicalToPhysical(uint8_t logical_index) const {
