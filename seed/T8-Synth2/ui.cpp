@@ -204,7 +204,7 @@ void Ui::InitPages() {
     // Инициализация всех страниц
     for(int i = 0; i < PAGE_LAST; i++) {
         if(pages_[i]) {
-            pages_[i]->SetContext(patches_, voices_, modulations_, display_);
+            pages_[i]->SetContext(patches_, voices_, modulations_, display_, pots_);
             pages_[i]->OnInit();
         }
     }

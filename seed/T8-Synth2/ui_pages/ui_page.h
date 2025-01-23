@@ -2,6 +2,7 @@
 
 #include "../drivers/display_controller.h"
 #include "../dsp/voice.h"
+#include "../drivers/pot_controller.h"  // Add this include
 
 namespace t8synth {
 
@@ -43,12 +44,13 @@ class UiPage {
   void SetContext(plaits::Patch** patches,
                  plaits::Voice** voices,
                  plaits::Modulations* mods,
-                 DisplayController* display) {
+                 DisplayController* display,
+                 PotController* pots) {  // Add pots parameter
     patches_ = patches;
     voices_ = voices;
     modulations_ = mods;
     display_ = display;
-    // Увеличиваем NUM_VOICES до 8
+    pots_ = pots;  // Store pots controller
     NUM_VOICES = 8;
   }
 
@@ -60,6 +62,7 @@ class UiPage {
   plaits::Voice** voices_{nullptr};
   plaits::Modulations* modulations_{nullptr};
   DisplayController* display_{nullptr};
+  PotController* pots_{nullptr};  // Add pots member
   size_t NUM_VOICES{4};  // Делаем переменной
 };
 
