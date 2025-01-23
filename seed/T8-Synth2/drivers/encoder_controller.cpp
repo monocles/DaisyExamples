@@ -37,6 +37,11 @@ void EncoderController::Init() {
         WriteReg(GPPU_B, 0xFF, i);
     }
 
+    // Configure interrupts for all three MCPs
+    for (int i = 0; i < 3; i++) {
+        ConfigureInterrupts(i);
+    }
+
     // Reset states
     for(int i = 0; i < NUM_ENCODERS; i++) {
         encoders_[i] = {0, 0x00};  // Initialize button state as released (all 0's)
@@ -52,6 +57,14 @@ void EncoderController::Init() {
     for(int i = 0; i < NUM_BUTTONS; i++) {
         button_states_[i] = false;
     }
+
+    // Инициализация пина прерывания (PD11)
+    daisy::GPIO::Config gpio_config;
+    gpio_config.pin = daisy::Pin(daisy::PORTD, 11);  // Используем правильное пространство имен
+    gpio_config.mode = daisy::GPIO::Mode::INPUT;
+    gpio_config.pull = daisy::GPIO::Pull::PULLUP;
+    gpio_config.speed = daisy::GPIO::Speed::LOW;
+    interrupt_pin_.Init(gpio_config);
 }
 
 void EncoderController::InitSPI() {
@@ -81,80 +94,101 @@ void EncoderController::Update() {
 }
 
 void EncoderController::UpdateHardware() {
-    // First MCP23S17 (encoders 0-3)
-    uint8_t port_a = ReadReg(GPIO_A, 0);
-    uint8_t port_b = ReadReg(GPIO_B, 0);
-    
-    // Сохраняем сырые данные
-    raw_data_[0].ab_state = (port_b >> 0) & 0x3;
-    raw_data_[0].button = (port_b & (1 << 2)) ? 0 : 1;
-    
-    raw_data_[1].ab_state = (port_b >> 3) & 0x3;
-    raw_data_[1].button = (port_b & (1 << 5)) ? 0 : 1;
-    
-    raw_data_[2].ab_state = (port_b >> 6) & 0x3;
-    raw_data_[2].button = (port_a & (1 << 0)) ? 0 : 1;
-    
-    raw_data_[3].ab_state = (port_a >> 1) & 0x3;
-    raw_data_[3].button = (port_a & (1 << 3)) ? 0 : 1;
+    // Используем метод Read() вместо HAL_GPIO_ReadPin
+    if(interrupt_pin_.Read() == true) {  // Active LOW
+        
+        // Проверяем все MCP на наличие изменений
+        for(int mcp_num = 0; mcp_num < 3; mcp_num++) {
+            uint8_t intfa = ReadReg(INTFA, mcp_num);
+            uint8_t intfb = ReadReg(INTFB, mcp_num);
+            
+            if(intfa || intfb) {
+                uint8_t port_a = ReadReg(INTCAPA, mcp_num);
+                uint8_t port_b = ReadReg(INTCAPB, mcp_num);
+                ProcessInterruptData(mcp_num, port_a, port_b);
+            }
+        }
+    }
+}
 
-    // Second MCP23S17 (encoders 4-6 and buttons)
-    uint8_t port_a2 = ReadReg(GPIO_A, 1);
-    uint8_t port_b2 = ReadReg(GPIO_B, 1);
+// Добавляем новый метод для обработки данных прерывания
+void EncoderController::ProcessInterruptData(int mcp_num, uint8_t port_a, uint8_t port_b) {
+    // Объявляем переменные до switch
+    uint8_t port_a2, port_b2;
+    uint8_t port_a3, port_b3;
 
-    // Encoder 5 (GPB0-2)
-    raw_data_[4].ab_state = (port_b2 >> 0) & 0x3;
-    raw_data_[4].button = (port_b2 & (1 << 2)) ? 0 : 1;
+    switch(mcp_num) {
+        case 0:
+            // Process first MCP data (encoders 0-3)
+            raw_data_[0].ab_state = (port_b >> 0) & 0x3;
+            raw_data_[0].button = (port_b & (1 << 2)) ? 0 : 1;
+            
+            raw_data_[1].ab_state = (port_b >> 3) & 0x3;
+            raw_data_[1].button = (port_b & (1 << 5)) ? 0 : 1;
+            
+            raw_data_[2].ab_state = (port_b >> 6) & 0x3;
+            raw_data_[2].button = (port_a & (1 << 0)) ? 0 : 1;
+            
+            raw_data_[3].ab_state = (port_a >> 1) & 0x3;
+            raw_data_[3].button = (port_a & (1 << 3)) ? 0 : 1;
+            break;
+            
+        case 1:
+            // Process second MCP data (encoders 4-6 and buttons)
+            port_a2 = ReadReg(GPIO_A, 1);  // Теперь просто присваивание
+            port_b2 = ReadReg(GPIO_B, 1);
 
-    // Encoder 6 (GPB6-7, GPA0)
-    raw_data_[5].ab_state = (port_b2 >> 6) & 0x3;
-    raw_data_[5].button = (port_a2 & (1 << 0)) ? 0 : 1;
+            // Encoder 5 (GPB0-2)
+            raw_data_[4].ab_state = (port_b2 >> 0) & 0x3;
+            raw_data_[4].button = (port_b2 & (1 << 2)) ? 0 : 1;
 
-    // Encoder 7 (GPA4-6)
-    raw_data_[6].ab_state = (port_a2 >> 4) & 0x3;
-    raw_data_[6].button = (port_a2 & (1 << 6)) ? 0 : 1;
+            // Encoder 6 (GPB6-7, GPA0)
+            raw_data_[5].ab_state = (port_b2 >> 6) & 0x3;
+            raw_data_[5].button = (port_a2 & (1 << 0)) ? 0 : 1;
 
-    // Buttons 1-3 (GPB3-5)
-    button_states_[0] = (port_b2 & (1 << 3)) ? 0 : 1;
-    button_states_[1] = (port_b2 & (1 << 4)) ? 0 : 1;
-    button_states_[2] = (port_b2 & (1 << 5)) ? 0 : 1;
+            // Encoder 7 (GPA4-6)
+            raw_data_[6].ab_state = (port_a2 >> 4) & 0x3;
+            raw_data_[6].button = (port_a2 & (1 << 6)) ? 0 : 1;
 
-    // Buttons 4-6 (GPA1-3)
-    button_states_[3] = (port_a2 & (1 << 1)) ? 0 : 1;
-    button_states_[4] = (port_a2 & (1 << 2)) ? 0 : 1;
-    button_states_[5] = (port_a2 & (1 << 3)) ? 0 : 1;
+            // Buttons 1-3 (GPB3-5)
+            button_states_[0] = (port_b2 & (1 << 3)) ? 0 : 1;
+            button_states_[1] = (port_b2 & (1 << 4)) ? 0 : 1;
+            button_states_[2] = (port_b2 & (1 << 5)) ? 0 : 1;
 
-    // Third MCP23S17 (encoders 7-10 and buttons 6-9)
-    uint8_t port_a3 = ReadReg(GPIO_A, 2);
-    uint8_t port_b3 = ReadReg(GPIO_B, 2);
+            // Buttons 4-6 (GPA1-3)
+            button_states_[3] = (port_a2 & (1 << 1)) ? 0 : 1;
+            button_states_[4] = (port_a2 & (1 << 2)) ? 0 : 1;
+            button_states_[5] = (port_a2 & (1 << 3)) ? 0 : 1;
+            break;
+            
+        case 2:
+            // Process third MCP data (encoders 7-10 and buttons)
+            port_a3 = ReadReg(GPIO_A, 2);  // Теперь просто присваивание
+            port_b3 = ReadReg(GPIO_B, 2);
 
-    // Encoder A (GPB0-2)
-    raw_data_[7].ab_state = (port_b3 >> 0) & 0x3;
-    raw_data_[7].button = (port_b3 & (1 << 2)) ? 0 : 1;
+            // Encoder A (GPB0-2)
+            raw_data_[7].ab_state = (port_b3 >> 0) & 0x3;
+            raw_data_[7].button = (port_b3 & (1 << 2)) ? 0 : 1;
 
-    // Encoder B (GPB3-5)
-    raw_data_[8].ab_state = (port_b3 >> 3) & 0x3;
-    raw_data_[8].button = (port_b3 & (1 << 5)) ? 0 : 1;
+            // Encoder B (GPB3-5)
+            raw_data_[8].ab_state = (port_b3 >> 3) & 0x3;
+            raw_data_[8].button = (port_b3 & (1 << 5)) ? 0 : 1;
 
-    // Encoder C (GPB6-7, GPA0)
-    raw_data_[9].ab_state = (port_b3 >> 6) & 0x3;
-    raw_data_[9].button = (port_a3 & (1 << 0)) ? 0 : 1;
+            // Encoder C (GPB6-7, GPA0)
+            raw_data_[9].ab_state = (port_b3 >> 6) & 0x3;
+            raw_data_[9].button = (port_a3 & (1 << 0)) ? 0 : 1;
 
-    // Encoder D (GPA1-3)
-    raw_data_[10].ab_state = (port_a3 >> 1) & 0x3;
-    raw_data_[10].button = (port_a3 & (1 << 3)) ? 0 : 1;
+            // Encoder D (GPA1-3)
+            raw_data_[10].ab_state = (port_a3 >> 1) & 0x3;
+            raw_data_[10].button = (port_a3 & (1 << 3)) ? 0 : 1;
 
-    // Additional buttons (GPA4-7)
-    button_states_[6] = (port_a3 & (1 << 4)) ? 0 : 1;  // Button A
-    button_states_[7] = (port_a3 & (1 << 5)) ? 0 : 1;  // Button B
-    button_states_[8] = (port_a3 & (1 << 6)) ? 0 : 1;  // Button C
-    button_states_[9] = (port_a3 & (1 << 7)) ? 0 : 1;  // Button D
-
-    // Debug output for encoder states
-    // for(int i = 7; i <= 10; i++) {
-    //     hw.PrintLine("Encoder %d: ab=%d btn=%d", 
-    //                 i, raw_data_[i].ab_state, raw_data_[i].button);
-    // }
+            // Additional buttons (GPA4-7)
+            button_states_[6] = (port_a3 & (1 << 4)) ? 0 : 1;  // Button A
+            button_states_[7] = (port_a3 & (1 << 5)) ? 0 : 1;  // Button B
+            button_states_[8] = (port_a3 & (1 << 6)) ? 0 : 1;  // Button C
+            button_states_[9] = (port_a3 & (1 << 7)) ? 0 : 1;  // Button D
+            break;
+    }
 }
 
 void EncoderController::ProcessEncoders() {
@@ -222,4 +256,26 @@ bool EncoderController::GetButtonState(uint8_t button_index) const {
         return button_states_[button_index];
     }
     return false;
+}
+
+void EncoderController::ConfigureInterrupts(int mcp_num) {
+    // Configure IOCON register
+    // MIRROR = 1 (INT A/B pins are internally connected)
+    // INTPOL = 1 (INT pins are active-high)
+    // ODR = 0 (INT pins are push-pull)
+    // HAEN = 1 (Hardware address enable)
+    WriteReg(IOCON, 0b01100010, mcp_num);
+
+    // Enable interrupts on all pins for both ports
+    WriteReg(GPINTENA, 0xFF, mcp_num);
+    WriteReg(GPINTENB, 0xFF, mcp_num);
+
+    // Configure interrupt behavior
+    // Set INTCON to 0 for comparing against previous value
+    WriteReg(INTCONA, 0x00, mcp_num);
+    WriteReg(INTCONB, 0x00, mcp_num);
+
+    // Clear any pending interrupts by reading INTCAP registers
+    ReadReg(INTCAPA, mcp_num);
+    ReadReg(INTCAPB, mcp_num);
 }

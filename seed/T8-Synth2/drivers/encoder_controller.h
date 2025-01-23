@@ -173,6 +173,19 @@ private:
     static constexpr uint8_t GPPU_A = 0x0C;
     static constexpr uint8_t GPPU_B = 0x0D;
 
+    // Add new MCP23S17 register definitions
+    static constexpr uint8_t GPINTENA = 0x04;  // Interrupt-on-change control register A
+    static constexpr uint8_t GPINTENB = 0x05;  // Interrupt-on-change control register B
+    static constexpr uint8_t DEFVALA = 0x06;   // Default compare register A
+    static constexpr uint8_t DEFVALB = 0x07;   // Default compare register B
+    static constexpr uint8_t INTCONA = 0x08;   // Interrupt control register A
+    static constexpr uint8_t INTCONB = 0x09;   // Interrupt control register B
+    static constexpr uint8_t IOCON = 0x0A;     // Configuration register
+    static constexpr uint8_t INTFA = 0x0E;     // Interrupt flag register A
+    static constexpr uint8_t INTFB = 0x0F;     // Interrupt flag register B
+    static constexpr uint8_t INTCAPA = 0x10;   // Interrupt capture register A
+    static constexpr uint8_t INTCAPB = 0x11;   // Interrupt capture register B
+
     // Lookup таблица для декодирования энкодера
     static constexpr int8_t ENCODER_LUT[4][4] = {
         {0, 1, -1, 0},
@@ -187,6 +200,12 @@ private:
 
     void UpdateEncoderState(uint8_t index, uint8_t ab_state);
     void UpdateButtonState(uint8_t index, uint8_t button);
+
+    // Add method for interrupt configuration
+    void ConfigureInterrupts(int mcp_num);
+
+    // Добавляем объявление метода обработки данных прерывания
+    void ProcessInterruptData(int mcp_num, uint8_t port_a, uint8_t port_b);
 
     // CS pins for both MCP23S17
     dsy_gpio cs_pin_1_;   // First MCP CS (PA4)
@@ -219,6 +238,8 @@ private:
 
     uint8_t sensitivity_divisor_{1};  // Default sensitivity divisor
     int8_t step_accumulator_[NUM_ENCODERS]{};  // Accumulated steps
+    
+    daisy::GPIO interrupt_pin_;
 
     // Маппинг логического индекса в физический
     uint8_t MapLogicalToPhysical(uint8_t logical_index) const {
