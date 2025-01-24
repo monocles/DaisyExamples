@@ -27,7 +27,6 @@ class Ui {
   ~Ui() = default;  // Используем = default вместо пустой реализации
   void Init(EncoderController* encoders, 
             DisplayController* display, 
-            PotController* pots,
             VoiceManager* voices,
             plaits::Modulations* modulations);
   void Poll();

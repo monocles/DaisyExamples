@@ -3,7 +3,8 @@
 // Define the static lookup table
 constexpr int8_t EncoderController::ENCODER_LUT[4][4];
 
-void EncoderController::Init() {
+void EncoderController::Init(daisy::SpiManager& spi_manager) {  // Added daisy:: namespace
+    spi_manager_ = &spi_manager;
 
     // Initialize first CS pin (PA4)
     cs_pin_1_.pin = {DSY_GPIOA, 4};
@@ -26,8 +27,8 @@ void EncoderController::Init() {
     dsy_gpio_init(&cs_pin_3_);
     dsy_gpio_write(&cs_pin_3_, 1);
 
-    // Initialize SPI6
-    InitSPI();
+    // Remove SPI init
+    // InitSPI();
 
     // Configure all three MCPs
     for (int i = 0; i < 3; i++) {
@@ -67,25 +68,7 @@ void EncoderController::Init() {
     interrupt_pin_.Init(gpio_config);
 }
 
-void EncoderController::InitSPI() {
-    // Configure SPI6
-    daisy::SpiHandle::Config spi_config;
-    spi_config.periph = daisy::SpiHandle::Config::Peripheral::SPI_6;
-    spi_config.mode = daisy::SpiHandle::Config::Mode::MASTER;
-    spi_config.direction = daisy::SpiHandle::Config::Direction::TWO_LINES;
-    spi_config.datasize = 8;
-    spi_config.clock_polarity = daisy::SpiHandle::Config::ClockPolarity::LOW;
-    spi_config.clock_phase = daisy::SpiHandle::Config::ClockPhase::ONE_EDGE;
-    spi_config.nss = daisy::SpiHandle::Config::NSS::SOFT;
-    spi_config.baud_prescaler = daisy::SpiHandle::Config::BaudPrescaler::PS_32;
-
-    // Pin config for SPI6
-    spi_config.pin_config.sclk = {DSY_GPIOA, 5};
-    spi_config.pin_config.miso = {DSY_GPIOA, 6};
-    spi_config.pin_config.mosi = {DSY_GPIOA, 7};
-
-    spi_.Init(spi_config);
-}
+// Remove InitSPI() method since we're using shared SPI
 
 void EncoderController::Update() {
     UpdateHardware();
@@ -216,38 +199,49 @@ void EncoderController::ProcessButtons() {
 }
 
 void EncoderController::WriteReg(uint8_t reg, uint8_t value, int mcp_num) {
-    dsy_gpio* cs_pin;
     uint8_t addr = MCP23S17_ADDR;
+    uint8_t device;
     
     switch(mcp_num) {
-        case 1: cs_pin = &cs_pin_2_; addr |= MCP_ADDR2; break;
-        case 2: cs_pin = &cs_pin_3_; addr |= MCP_ADDR3; break;
-        default: cs_pin = &cs_pin_1_; break;
+        case 1: 
+            addr |= MCP_ADDR2; 
+            device = daisy::SpiManager::DEVICE_ENCODER_2;  // Added daisy:: namespace
+            break;
+        case 2: 
+            addr |= MCP_ADDR3;
+            device = daisy::SpiManager::DEVICE_ENCODER_3;  // Added daisy:: namespace
+            break;
+        default: 
+            device = daisy::SpiManager::DEVICE_ENCODER_1;  // Added daisy:: namespace
+            break;
     }
 
     uint8_t data[3] = {addr, reg, value};
-    dsy_gpio_write(cs_pin, 0);
-    spi_.BlockingTransmit(data, 3);
-    dsy_gpio_write(cs_pin, 1);
+    spi_manager_->Transmit(device, data, 3);
 }
 
 uint8_t EncoderController::ReadReg(uint8_t reg, int mcp_num) {
-    dsy_gpio* cs_pin;
     uint8_t addr = MCP23S17_ADDR | MCP_READ;
+    uint8_t device;
     
     switch(mcp_num) {
-        case 1: cs_pin = &cs_pin_2_; addr |= MCP_ADDR2; break;
-        case 2: cs_pin = &cs_pin_3_; addr |= MCP_ADDR3; break;
-        default: cs_pin = &cs_pin_1_; break;
+        case 1: 
+            addr |= MCP_ADDR2;
+            device = daisy::SpiManager::DEVICE_ENCODER_2;  // Added daisy:: namespace
+            break;
+        case 2: 
+            addr |= MCP_ADDR3;
+            device = daisy::SpiManager::DEVICE_ENCODER_3;  // Added daisy:: namespace
+            break;
+        default: 
+            device = daisy::SpiManager::DEVICE_ENCODER_1;  // Added daisy:: namespace
+            break;
     }
 
     uint8_t tx_data[3] = {addr, reg, 0x00};
     uint8_t rx_data[3];
     
-    dsy_gpio_write(cs_pin, 0);
-    spi_.BlockingTransmitAndReceive(tx_data, rx_data, 3);
-    dsy_gpio_write(cs_pin, 1);
-    
+    spi_manager_->TransmitAndReceive(device, tx_data, rx_data, 3);
     return rx_data[2];
 }
 

@@ -101,7 +101,7 @@ int main(void)
 	hw.Init(true);
 	hw.SetAudioBlockSize(BLOCK_SIZE); // number of samples handled per callback
 	hw.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_48KHZ);
-  	hw.StartLog(true);
+  	hw.StartLog();
     loadMeter.Init(hw.AudioSampleRate(), BLOCK_SIZE);
 	InitPollTimer();
 

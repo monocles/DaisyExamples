@@ -6,7 +6,7 @@
 #include "drivers/encoder_controller.h"
 #include "drivers/spi_manager.h"
 #include "drivers/display_controller.h"
-#include "drivers/pot_controller.h"
+// #include "drivers/pot_controller.h"
 #include "voice_manager.h"
 
 using namespace daisy;
@@ -18,7 +18,7 @@ DaisySeed hw;
 
 SpiManager spi_manager;
 EncoderController encoders;
-PotController pots;
+// PotController pots;
 DisplayController display;
 Ui ui;
 
@@ -41,13 +41,14 @@ Modulations modulations = {};
 void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size)
 {
 	encoders.UpdateHardware();
+    // pots.Update();
 
     // Update common parameters with template method
-    voice_manager.SetCommonParameter(&plaits::Patch::harmonics, pots.GetPotValue(0));
-    voice_manager.SetCommonParameter(&plaits::Patch::timbre, pots.GetPotValue(1));
-    voice_manager.SetCommonParameter(&plaits::Patch::morph, pots.GetPotValue(2));
-    voice_manager.SetCommonParameter(&plaits::Patch::lpg_colour, pots.GetPotValue(3));
-    voice_manager.SetCommonParameter(&plaits::Patch::decay, pots.GetPotValue(4));
+    // voice_manager.SetCommonParameter(&plaits::Patch::harmonics, pots.GetPotValue(0));
+    // voice_manager.SetCommonParameter(&plaits::Patch::timbre, pots.GetPotValue(1));
+    // voice_manager.SetCommonParameter(&plaits::Patch::morph, pots.GetPotValue(2));
+    // voice_manager.SetCommonParameter(&plaits::Patch::lpg_colour, pots.GetPotValue(3));
+    // voice_manager.SetCommonParameter(&plaits::Patch::decay, pots.GetPotValue(4));
 
     Voice::Frame outputs[VoiceManager::NUM_VOICES][BLOCK_SIZE];
 
@@ -89,18 +90,20 @@ int main(void)
 	hw.Init(true);
 	hw.SetAudioBlockSize(BLOCK_SIZE); // number of samples handled per callback
 	hw.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_48KHZ);
-  	// hw.StartLog();
-    // loadMeter.Init(hw.AudioSampleRate(), BLOCK_SIZE);
+  	hw.StartLog(true);
 	InitPollTimer();
 
-	spi_manager.Init();
-	pots.Init(hw, spi_manager);
-	display.Init(hw, spi_manager);
-	encoders.Init();
+    // Initialize SPI manager with hardware reference
+    spi_manager.Init(&hw);
+    
+    // Pass SPI manager to encoders
+    encoders.Init(spi_manager);
+    display.Init(hw, spi_manager);
 	voice_manager.Init();
-	ui.Init(&encoders, &display, &pots, &voice_manager, &modulations);
+	ui.Init(&encoders, &display, &voice_manager, &modulations);
 
 	hw.StartAudio(AudioCallback);
+    hw.PrintLine("Log started");
 
 	while(1) {
 		ui.DoEvents();

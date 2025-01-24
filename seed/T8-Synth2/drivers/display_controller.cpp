@@ -77,7 +77,7 @@ void DisplayController::InitOled() {
     WriteData(0xFD);
     WriteCommand(0xBE); // set VCOMH
     WriteData(0x04);
-    WriteCommand(0xA6); // set normal display
+    WriteCommand(0xA7); // set normal display
 
     ScreenSetRect(0, 0, 128, 64);
     ScreenClear();

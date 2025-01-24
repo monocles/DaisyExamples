@@ -6,11 +6,11 @@
 const int32_t kLongPressDuration = 1000;
 
 void Ui::Init(EncoderController* encoders, DisplayController* display, 
-              PotController* pots, VoiceManager* voices,
+            VoiceManager* voices,
               plaits::Modulations* modulations) {
     encoders_ = encoders;
     display_ = display;
-    pots_ = pots;
+    // pots_ = pots;
     voice_manager_ = voices;
     modulations_ = modulations;
 
@@ -45,7 +45,7 @@ void Ui::Poll() {
     uint32_t now = system_clock.milliseconds();
     ++sub_clock_;
     
-    pots_->Update();
+    // pots_->Update();
     
     // Обрабатываем энкодеры и кнопки только если есть новые данные
     if(encoders_->HasNewData()) {
@@ -180,7 +180,7 @@ void Ui::DoEvents() {
     //     next_display_update = now + DISPLAY_UPDATE_INTERVAL;
     //     System::DelayUs(50);
     // }
-    if(current_page_ && pots_->IsFullySampled()) {
+    if(current_page_ ) {
         current_page_->UpdateDisplay();
         // next_display_update = now + DISPLAY_UPDATE_INTERVAL;
         // System::DelayUs(50);

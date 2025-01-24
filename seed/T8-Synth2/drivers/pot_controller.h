@@ -234,11 +234,11 @@ private:
         mux_data[0] = (channel < POTS_PER_BOARD) ? DISABLE_MASK : MUX_DATA[local_channel];
 
         // Use pointer to SPI handle
-        spi_manager_->Transmit(SpiManager::DEVICE_POTS, mux_data, 2);        
+        // spi_manager_->Transmit(SpiManager::DEVICE_POTS, mux_data, 2);        
     }
 
     // Константы для сглаживания
-    static constexpr float SMOOTHING_FACTOR = 0.03f;    // Коэффициент сглаживания
+    static constexpr float SMOOTHING_FACTOR = 0.01f;    // Коэффициент сглаживания
     static constexpr float HYSTERESIS_THRESHOLD = 0.005f; // Порог гистерезиса 0.2%
 
     // Выравнивание данных для оптимального доступа к памяти

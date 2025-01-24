@@ -1,6 +1,7 @@
 #pragma once
 
 #include "daisy_seed.h"
+#include "drivers/spi_manager.h"  // Add include
 
 class EncoderController {
 public:
@@ -12,7 +13,7 @@ public:
         uint8_t button_state; // 8-bit history of button states
     };
 
-    void Init();
+    void Init(daisy::SpiManager& spi_manager);  // Changed Init signature
     void Update();
     const EncoderState& GetEncoder(uint8_t index) const { return encoders_[index]; }
 
@@ -218,7 +219,13 @@ private:
     dsy_gpio cs_pin_2_;   // Second MCP CS (PC1)
     dsy_gpio cs_pin_3_;   // Third MCP CS (PC4)
 
-    daisy::SpiHandle spi_;
+    // Remove old SPI members
+    // daisy::SpiHandle spi_;
+    // dsy_gpio cs_pin_;
+
+    // Add SPI manager reference
+    daisy::SpiManager* spi_manager_;  // Added daisy:: namespace
+    
     EncoderState encoders_[NUM_ENCODERS];
     uint8_t last_state_[NUM_ENCODERS];  // Changed from last_states_ to last_state_
     dsy_gpio cs_pin_;
