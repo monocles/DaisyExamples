@@ -64,9 +64,10 @@ public:
 
     PotController() : current_channel_(0), state_(STATE_IDLE) {}
     
-    void Init(DaisySeed& hw, SpiManager& spi_manager) {
+    void Init(DaisySeed& hw) {  // Убираем SpiManager из параметров
         seed_ = &hw;
-        spi_manager_ = &spi_manager;
+        InitSpi();
+        InitGpio();
         
         // Setup ADC with slower sampling for stability
         AdcChannelConfig adc_config;
@@ -233,8 +234,38 @@ private:
         mux_data[1] = (channel < POTS_PER_BOARD) ? MUX_DATA[local_channel] : DISABLE_MASK;
         mux_data[0] = (channel < POTS_PER_BOARD) ? DISABLE_MASK : MUX_DATA[local_channel];
 
-        // Use pointer to SPI handle
-        // spi_manager_->Transmit(SpiManager::DEVICE_POTS, mux_data, 2);        
+        // Используем собственный SPI и CS
+        dsy_gpio_write(&cs_pin_, 0);
+        spi_.BlockingTransmit(mux_data, 2);
+        dsy_gpio_write(&cs_pin_, 1);
+    }
+
+    void InitSpi() {
+        spi_config_.periph = SpiHandle::Config::Peripheral::SPI_1;
+        spi_config_.mode = SpiHandle::Config::Mode::MASTER;
+        spi_config_.direction = SpiHandle::Config::Direction::TWO_LINES_TX_ONLY;
+        spi_config_.datasize = 8;
+        spi_config_.clock_polarity = SpiHandle::Config::ClockPolarity::LOW;
+        spi_config_.clock_phase = SpiHandle::Config::ClockPhase::ONE_EDGE;
+        spi_config_.nss = SpiHandle::Config::NSS::SOFT;
+        spi_config_.baud_prescaler = SpiHandle::Config::BaudPrescaler::PS_32;
+        
+        // Configure pins for SPI1
+        spi_config_.pin_config.mosi = {DSY_GPIOB, 5};   // PB5
+        spi_config_.pin_config.sclk = {DSY_GPIOG, 11};  // PG11
+
+        if(spi_.Init(spi_config_) != SpiHandle::Result::OK) {
+            seed_->PrintLine("Pots SPI Init failed!");
+        }
+    }
+
+    void InitGpio() {
+        // Initialize CS pin for pots
+        cs_pin_.pin = {DSY_GPIOB, 12};  // PB12
+        cs_pin_.mode = DSY_GPIO_MODE_OUTPUT_PP;
+        cs_pin_.pull = DSY_GPIO_NOPULL;
+        dsy_gpio_init(&cs_pin_);
+        dsy_gpio_write(&cs_pin_, 1);  // Inactive high
     }
 
     // Константы для сглаживания
@@ -252,6 +283,11 @@ private:
     bool waiting_for_catch_up_{false};
     float frozen_values_[NUM_POTS]{};
     mutable float smoothed_values_[NUM_POTS]{};  // Массив сглаженных значений
+
+    // Добавляем переменные для работы с SPI
+    SpiHandle spi_;
+    SpiHandle::Config spi_config_;
+    dsy_gpio cs_pin_;
 };
 
 

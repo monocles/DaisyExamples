@@ -137,10 +137,12 @@ void Ui::HandlePageEvent(const Event& e) {
             hw.PrintLine("Switch %d: %d", e.control_id, e.data);
             using BTN = EncoderController::ButtonIndex;
             if(e.control_id == BTN::VOICE_BUTTON) {
+                hw.PrintLine("Switch to voice page");
                 ShowPage(PAGE_PERFORMANCE);
                 return;
             }
             if(e.control_id == BTN::PITCH_BUTTON) {
+                hw.PrintLine("Switch to pitch page");
                 ShowPage(PAGE_PITCH);
                 return;
             }
@@ -181,6 +183,7 @@ void Ui::DoEvents() {
     //     System::DelayUs(50);
     // }
     if(current_page_ ) {
+        hw.PrintLine("Update display");
         current_page_->UpdateDisplay();
         // next_display_update = now + DISPLAY_UPDATE_INTERVAL;
         // System::DelayUs(50);
