@@ -22,7 +22,7 @@ public:
             voices_[i].buffer = voice_buffers[i];
             stmlib::BufferAllocator allocator(voices_[i].buffer, BUFFER_SIZE);
             voices_[i].voice.Init(&allocator);
-            voices_[i].patch.engine = 2;
+            voices_[i].patch.engine = 0;
         }
     }
 

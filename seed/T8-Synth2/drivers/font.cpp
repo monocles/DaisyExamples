@@ -227,7 +227,7 @@ const glyph_t font_data[] = {
 
 const uint32_t font_nglyphs = sizeof(font_data)/sizeof(glyph_t) - 1;
 
-const glyph2_t font2_data[] = {
+const glyph_big_t font_big_data[] = {
   { /* 0x00020UL, 0, 2UL, */ 0, 0, { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } },  // ␣
   { /* 0x00021UL, 0, 2UL, */ 4, 5, { 0x00, 0x00, 0x00, 0x00, 0x19fe, 0x19fe, 0x00, 0x00, 0x00, 0x00 } },  // !
   { /* 0x00022UL, 0, 2UL, */ 2, 4, { 0x00, 0x00, 0x1e, 0x1e, 0x00, 0x1e, 0x1e, 0x00, 0x00, 0x00 } },  // "
@@ -326,7 +326,36 @@ const glyph2_t font2_data[] = {
   { /* 0x0007fUL, 0, 2UL, */ 0, 0, { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } },  // ⌫
 };
 
-const uint32_t font2_nglyphs = sizeof(font2_data)/sizeof(glyph2_t) - 1;
+const uint32_t font_big_nglyphs = sizeof(font_big_data)/sizeof(glyph_big_t) - 1;
+
+
+const glyph_icon_t font_icon_data[] = {
+  { /* 0x00020UL, 0, 2UL, */ 0, 0, { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } },  // ␣
+  { /* 0x00021UL, 0, 2UL, */ 0, 0, { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } },  // !
+  { /* 0x00022UL, 0, 2UL, */ 0, 0, { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } },  // "
+  { /* 0x00023UL, 0, 2UL, */ 0, 0, { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } },  // #
+  { /* 0x00024UL, 0, 2UL, */ 0, 0, { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } },  // $
+  { /* 0x00025UL, 0, 2UL, */ 0, 0, { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } },  // %
+  { /* 0x00026UL, 0, 2UL, */ 0, 0, { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } },  // &
+  { /* 0x00027UL, 0, 2UL, */ 0, 0, { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } },  // '
+  { /* 0x00028UL, 0, 2UL, */ 0, 0, { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } },  // (
+  { /* 0x00029UL, 0, 2UL, */ 0, 0, { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } },  // )
+  { /* 0x0002aUL, 0, 2UL, */ 0, 0, { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } },  // *
+  { /* 0x0002bUL, 0, 2UL, */ 0, 0, { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } },  // +
+  { /* 0x0002cUL, 0, 2UL, */ 0, 0, { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } },  // ,
+  { /* 0x0002dUL, 0, 2UL, */ 0, 0, { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } },  // -
+  { /* 0x0002eUL, 0, 2UL, */ 0, 0, { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } },  // .
+  { /* 0x0002fUL, 0, 2UL, */ 0, 0, { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } },  // /
+  { /* 0x00030UL, 0, 2UL, */ 0, 2, { 0x03, 0x0c, 0x10, 0x10, 0x0e, 0x01, 0x01, 0x06, 0x18, 0x00 } },  // 0
+  { /* 0x00031UL, 0, 2UL, */ 0, 2, { 0x02, 0x1c, 0x04, 0x03, 0x0c, 0x06, 0x1c, 0x03, 0x02, 0x00 } },  // 1
+  { /* 0x00032UL, 0, 2UL, */ 0, 1, { 0x10, 0x10, 0x08, 0x06, 0x01, 0x01, 0x06, 0x08, 0x10, 0x10 } },  // 2
+  { /* 0x00033UL, 0, 2UL, */ 0, 2, { 0x11, 0x04, 0x00, 0x09, 0x02, 0x10, 0x04, 0x11, 0x08, 0x00 } },  // 3
+  { /* 0x00034UL, 0, 2UL, */ 0, 1, { 0x10, 0x0c, 0x02, 0x1f, 0x00, 0x01, 0x01, 0x1f, 0x10, 0x10 } },  // 4
+  { /* 0x00035UL, 0, 2UL, */ 0, 1, { 0x10, 0x10, 0x1f, 0x10, 0x10, 0x1f, 0x10, 0x1f, 0x10, 0x10 } },  // 5
+  { /* 0x00036UL, 0, 2UL, */ 0, 1, { 0x04, 0x04, 0x07, 0x01, 0x01, 0x1f, 0x10, 0x1c, 0x04, 0x04 } },  // 6
+  { /* 0x00037UL, 0, 2UL, */ 2, 4, { 0x00, 0x00, 0x15, 0x0e, 0x1b, 0x0e, 0x15, 0x00, 0x00, 0x00 } },  // 7
+};
+
 
 //------------------------------------------
 //-----  functions
@@ -463,11 +492,11 @@ extern uint8_t* font_glyph_bigbig(char ch, uint8_t* buf, uint8_t w, uint8_t a, u
   return p;
 }
 
-uint8_t font2_glyph(char ch, uint8_t* buf, uint8_t w, uint8_t a, uint8_t b) {
+uint8_t font_glyph_bold(char ch, uint8_t* buf, uint8_t w, uint8_t a, uint8_t b) {
     uint8_t i=0;
     uint8_t j;
     uint8_t * p = buf;
-    const glyph2_t* gl = &(font2_data[ch - FONT2_ASCII_OFFSET]);
+    const glyph_big_t* gl = &(font_big_data[ch - FONT2_ASCII_OFFSET]);
 
     uint8_t cols = FONT2_CHARW - gl->first - gl->last;
     while(i < cols) {
@@ -481,18 +510,37 @@ uint8_t font2_glyph(char ch, uint8_t* buf, uint8_t w, uint8_t a, uint8_t b) {
     return cols;
 }
 
-uint8_t* font2_string(const char* str, uint8_t* buf, uint32_t size, uint8_t w, uint8_t a, uint8_t b) {
-    uint8_t* max = buf + size - 8;
-    while(buf < max) {
-        if (*str == 0) break;
-        buf += font2_glyph(*str, buf, w, a, b);
-        ++buf;
-        ++str;
+uint8_t font_glyph_icon(char ch, uint8_t* buf, uint8_t w, uint8_t a, uint8_t b) {
+    uint8_t i=0;
+    uint8_t j;
+    uint8_t * p = buf;
+    const glyph_icon_t* gl = &(font_icon_data[ch - FONT_ASCII_OFFSET]);
+
+    uint8_t cols = FONT3_CHARW - gl->first - gl->last;
+    while(i < cols) {
+        for(j=0; j<FONT3_CHARH; j++) {
+            *p = gl->data[i + gl->first] & (1 << j) ? a : b;
+            p += w;
+        }
+        i++;
+        p = buf + i;
     }
-    return buf;
+    return cols;
 }
 
-void region_string_font2(region* reg, const char* str, uint8_t xoff, uint8_t yoff, uint8_t fg, uint8_t bg) {
+
+// uint8_t* font2_string(const char* str, uint8_t* buf, uint32_t size, uint8_t w, uint8_t a, uint8_t b) {
+//     uint8_t* max = buf + size - 8;
+//     while(buf < max) {
+//         if (*str == 0) break;
+//         buf += font_glyph_bold(*str, buf, w, a, b);
+//         ++buf;
+//         ++str;
+//     }
+//     return buf;
+// }
+
+void region_string_big(region* reg, const char* str, uint8_t xoff, uint8_t yoff, uint8_t fg, uint8_t bg) {
     uint8_t* buf = reg->data + xoff + (uint32_t)(reg->w) * (uint32_t)yoff;
     uint8_t* max = reg->data + reg->len;
     uint32_t xmax = reg->w - FONT2_CHARW;
@@ -500,7 +548,24 @@ void region_string_font2(region* reg, const char* str, uint8_t xoff, uint8_t yof
     
     while(buf < max) {
         if(*str == 0) break;
-        dx = font2_glyph(*str, buf, reg->w, fg, bg) + 1;
+        dx = font_glyph_bold(*str, buf, reg->w, fg, bg) + 1;
+        buf += dx;
+        xoff += dx;
+        ++str;
+        if(xoff > xmax) return;
+    }
+    reg->dirty = 1;
+}
+
+void region_string_big(region* reg, const char* str, uint8_t xoff, uint8_t yoff, uint8_t fg, uint8_t bg, uint8_t color) {
+    uint8_t* buf = reg->data + xoff + (uint32_t)(reg->w) * (uint32_t)yoff;
+    uint8_t* max = reg->data + reg->len;
+    uint32_t xmax = reg->w - FONT2_CHARW;
+    uint8_t dx = 0;
+    
+    while(buf < max) {
+        if(*str == 0) break;
+        dx = font_glyph_bold(*str, buf, reg->w, (color ? bg : fg), (color ? fg : bg)) + 1;
         buf += dx;
         xoff += dx;
         ++str;

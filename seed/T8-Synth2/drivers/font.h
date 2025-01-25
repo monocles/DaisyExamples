@@ -22,6 +22,10 @@
 #define FONT2_CHARH 14
 #define FONT2_ASCII_OFFSET 0x20
 
+#define FONT3_CHARW 10
+#define FONT3_CHARH 5
+
+
 //---------------------------
 //---- variables
 
@@ -31,17 +35,26 @@ typedef struct _glyph {
   uint8_t    data[FONT_CHARW]; // column data 
 } glyph_t;
 
-typedef struct _glyph2 {
+typedef struct glyph_big {
   uint8_t    first;
   uint8_t    last; 
   uint16_t    data[FONT2_CHARW];
-} glyph2_t;
+} glyph_big_t;
+
+typedef struct glyph_icon {
+  uint8_t    first;
+  uint8_t    last; 
+  uint8_t    data[FONT3_CHARW];
+} glyph_icon_t;
+
 
 extern const glyph_t font_data[];
-extern const glyph2_t font2_data[];
+extern const glyph_big_t font_big_data[];
+extern const glyph_icon_t font_icon_data[];
+
 
 extern const uint32_t font_nglyphs;
-extern const uint32_t font2_nglyphs;
+extern const uint32_t font_big_nglyphs;
 
 //-------------------------------
 //--- functions
@@ -64,9 +77,11 @@ extern uint8_t* font_string_big(const char* str, uint8_t* buf, uint32_t size, ui
 // same as font_string, 4x size
 extern uint8_t* font_string_bigbig(const char* str, uint8_t* buf, uint32_t size, uint8_t w, uint8_t a, uint8_t b);
 
-extern uint8_t font2_glyph(char ch, uint8_t* buf, uint8_t w, uint8_t a, uint8_t b);
-extern uint8_t font2_glyph_fixed(char ch, uint8_t* buf, uint8_t w, uint8_t a, uint8_t b);
-extern uint8_t* font2_string(const char* str, uint8_t* buf, uint32_t size, uint8_t w, uint8_t a, uint8_t b);
+extern uint8_t font_glyph_bold(char ch, uint8_t* buf, uint8_t w, uint8_t a, uint8_t b);
+// extern uint8_t font2_glyph_fixed(char ch, uint8_t* buf, uint8_t w, uint8_t a, uint8_t b);
+// extern uint8_t* font2_string(const char* str, uint8_t* buf, uint32_t size, uint8_t w, uint8_t a, uint8_t b);
+
+extern uint8_t font_glyph_icon(char ch, uint8_t* buf, uint8_t w, uint8_t a, uint8_t b);
 
 uint8_t font_string_position(const char* str, uint8_t pos);
 uint8_t font_string_pixels(const char* str);
@@ -79,7 +94,7 @@ extern void font_string_region_clip_right(region* reg, const char* str, uint8_t 
 extern void font_string_region_clip_hi(region* reg, const char* str, uint8_t x, uint8_t y, uint8_t fg, uint8_t bg, uint8_t hi);
 extern void font_string_region_clip_hid(region* reg, const char* str, uint8_t x, uint8_t y, uint8_t fg, uint8_t bg, uint8_t hi, uint8_t hid);
 
-extern void region_string_font2(region* reg, const char* str, uint8_t x, uint8_t y, uint8_t fg, uint8_t bg);
+extern void region_string_big(region* reg, const char* str, uint8_t x, uint8_t y, uint8_t fg, uint8_t bg, uint8_t color = 0);
 
 ///--- anti-aliased
 

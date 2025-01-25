@@ -21,9 +21,6 @@ $(STMLIB_DIR)/system/system_clock.cpp \
 $(STMLIB_DIR)/utils/random.cpp
 
 TEST_SOURCES = \
-dsp/engine/wavetable_engine.cpp \
-dsp/engine2/string_machine_engine.cpp \
-dsp/engine/string_engine.cpp \
 dsp/engine2/virtual_analog_vcf_engine.cpp \
 
 ENGINE_1_SOURCES = \
@@ -76,8 +73,8 @@ dsp/speech/sam_speech_synth.cpp
 CPP_SOURCES = \
 $(TOPLEVEL_SOURCES) \
 $(TEST_SOURCES) \
-$(CHORD_SOURCES) \
-$(PHYSICAL_MODELLING_SOURCES)
+# $(CHORD_SOURCES) \
+# $(PHYSICAL_MODELLING_SOURCES)
 # $(ENGINE_1_SOURCES) \
 # $(ENGINE_2_SOURCES) \
 # $(FM_SOURCES) \

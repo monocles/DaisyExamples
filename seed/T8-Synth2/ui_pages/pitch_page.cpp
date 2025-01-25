@@ -23,29 +23,30 @@ void PitchPage::OnInit() {
 }
 
 void PitchPage::DrawSliders() {
-  static constexpr uint8_t PATTERN_HEIGHT = 16;
-  static constexpr uint8_t PATTERN_SPACING = 10;  // Отступ между паттернами
-  static constexpr uint8_t GROUP_SPACING = 10;    // Отступ между группами
-  static constexpr uint8_t PATTERN_LEFT_OFFSET = 12;  // Начальный отступ слева
-  static constexpr uint8_t NUM_PATTERNS = 4;  // Количество паттернов в группе
-  
-  uint32_t start_y = content_region.h - PATTERN_HEIGHT - 10; // 10 для нот
-  
-  // Рисуем первую группу из 4 паттернов
-  for(uint8_t pattern = 0; pattern < NUM_PATTERNS; pattern++) {
-    uint32_t x_offset = PATTERN_LEFT_OFFSET + (pattern * (3 + PATTERN_SPACING));
-    DrawSlider(x_offset, start_y);
-  }
+    // static constexpr uint8_t PATTERN_HEIGHT = 16;
+    static constexpr uint8_t PATTERN_SPACING = 12;
+    static constexpr uint8_t GROUP_SPACING = 6;
+    static constexpr uint8_t PATTERN_LEFT_OFFSET = 8;
+    static constexpr uint8_t NUM_PATTERNS = 4;
+    
+    // Начинаем рисовать слайдеры с отступом в 1 пиксель от верхней границы нот
+    uint32_t start_y = 9; // 8 пикселей на ноты + 1 пиксель отступ
+    
+    // Рисуем первую группу из 4 паттернов
+    for(uint8_t pattern = 0; pattern < NUM_PATTERNS; pattern++) {
+        uint32_t x_offset = PATTERN_LEFT_OFFSET + (pattern * (3 + PATTERN_SPACING));
+        DrawSlider(x_offset, start_y);
+    }
 
-  // Рисуем вторую группу из 4 паттернов с дополнительным отступом
-  uint32_t second_group_start = PATTERN_LEFT_OFFSET + 
-                               (NUM_PATTERNS * (3 + PATTERN_SPACING)) + 
-                               GROUP_SPACING;
+    // Рисуем вторую группу из 4 паттернов с дополнительным отступом
+    uint32_t second_group_start = PATTERN_LEFT_OFFSET + 
+                                 (NUM_PATTERNS * (3 + PATTERN_SPACING)) + 
+                                 GROUP_SPACING;
                                
-  for(uint8_t pattern = 0; pattern < NUM_PATTERNS; pattern++) {
-    uint32_t x_offset = second_group_start + (pattern * (3 + PATTERN_SPACING));
-    DrawSlider(x_offset, start_y);
-  }
+    for(uint8_t pattern = 0; pattern < NUM_PATTERNS; pattern++) {
+        uint32_t x_offset = second_group_start + (pattern * (3 + PATTERN_SPACING));
+        DrawSlider(x_offset, start_y);
+    }
 }
 
 // Вспомогательный метод для отрисовки одного паттерна
@@ -66,15 +67,15 @@ void PitchPage::DrawSlider(uint32_t x_offset, uint32_t start_y) {
 }
 
 void PitchPage::DrawNotes() {
-  static constexpr uint8_t PATTERN_SPACING = 10;
-  static constexpr uint8_t GROUP_SPACING = 10;
-  static constexpr uint8_t PATTERN_LEFT_OFFSET = 12;
+  static constexpr uint8_t PATTERN_SPACING = 12;
+  static constexpr uint8_t GROUP_SPACING = 6;
+  static constexpr uint8_t PATTERN_LEFT_OFFSET = 3;
   static constexpr uint8_t NUM_PATTERNS = 4;
 
   // Отрисовка нот для левой группы используя выбранные индексы
   for(uint8_t i = 0; i < NUM_PATTERNS; i++) {
-    uint32_t x_offset = PATTERN_LEFT_OFFSET + (i * (3 + PATTERN_SPACING)) - 3;
-    RenderNote(left_notes_[i], x_offset, 2);
+    uint32_t x_offset = PATTERN_LEFT_OFFSET + (i * (3 + PATTERN_SPACING));
+    RenderNote(left_notes_[i], x_offset, 0);
   }
 
   // Отрисовка правой группы нот
@@ -83,8 +84,8 @@ void PitchPage::DrawNotes() {
                                GROUP_SPACING;
 
   for(uint8_t i = 0; i < NUM_PATTERNS; i++) {
-    uint32_t x_offset = second_group_start + (i * (3 + PATTERN_SPACING)) - 3;
-    RenderNote(right_notes_[i], x_offset, 2);
+    uint32_t x_offset = second_group_start + (i * (3 + PATTERN_SPACING));
+    RenderNote(right_notes_[i], x_offset, 0);
   }
 }
 
@@ -146,10 +147,55 @@ void PitchPage::DrawModalContent() {
         note_str[2] = 0;
     }
 
-    uint32_t text_width = current_modal_note_.sharp ? 24 : 16;
-    uint32_t text_x = (MODAL_WIDTH - text_width) / 2;
-    uint32_t text_y = (MODAL_HEIGHT - 16) / 2;
-    region_string(&modal_region, note_str, text_x, text_y, 0xF, 0x0, 1);
+    // Отступ слева
+    static constexpr uint8_t LEFT_PADDING = 8;
+    // Отступ снизу для ноты
+    static constexpr uint8_t BOTTOM_PADDING = 8;
+    // Отступ между "NOTE:" и нотой
+    static constexpr uint8_t VERTICAL_SPACING = 4;
+
+    // Позиция для ноты (в левом нижнем углу)
+    uint32_t note_y = MODAL_HEIGHT - FONT2_CHARH - BOTTOM_PADDING;
+
+    // Позиция для текста "NOTE:" (над нотой)
+    uint32_t label_y = note_y - FONT_CHARH - VERTICAL_SPACING;
+
+    // Рендерим "NOTE:" стандартным шрифтом
+    region_string(&modal_region, "NOTE:", LEFT_PADDING, label_y, 0xF, 0x0, 0);
+    
+    // Рендерим саму ноту большим шрифтом
+    region_string_big(&modal_region, note_str, LEFT_PADDING, note_y, 0x0, 0xF, 1);
+
+    // Рисуем белый квадрат в правом верхнем углу
+    static constexpr uint8_t SQUARE_WIDTH = 11;  // Ширина 11
+    static constexpr uint8_t SQUARE_HEIGHT = 9; // Высота 10 
+    static constexpr uint8_t RIGHT_PADDING = 9;
+    static constexpr uint8_t TOP_PADDING = 7;
+    
+    // Позиция квадрата
+    uint32_t square_x = MODAL_WIDTH - SQUARE_WIDTH - RIGHT_PADDING;
+    uint32_t square_y = TOP_PADDING;
+
+    // Рисуем белый квадрат
+    for(uint32_t y = 0; y < SQUARE_HEIGHT; y++) {
+        region_fill_part(&modal_region,
+                        (square_y + y) * MODAL_WIDTH + square_x,
+                        SQUARE_WIDTH,
+                        0xFF);
+    }
+
+    // Формируем строку с названием элемента (A1-A4 или B1-B4)
+    char element_str[3];
+    element_str[0] = current_encoder_ < 4 ? 'A' : 'B';
+    element_str[1] = '1' + (current_encoder_ % 4);
+    element_str[2] = 0;
+
+    // Центрируем текст в квадрате с учетом разных размеров по ширине и высоте
+    uint32_t text_x = square_x + (SQUARE_WIDTH - 7) / 2;  
+    uint32_t text_y = square_y + (SQUARE_HEIGHT - 8) / 2;
+
+    // Рендерим название элемента черным по белому
+    region_string(&modal_region, element_str, text_x, text_y, 0x0, 0xFF, 0);
 }
 
 void PitchPage::DrawModal() {
@@ -172,6 +218,7 @@ void PitchPage::UpdateModal() {
 }
 
 void PitchPage::UpdateNoteByEncoder(uint8_t encoder, int32_t increment) {
+    current_encoder_ = encoder;  // Обновляем current_encoder_ и здесь для надежности
     Note& current_note = encoder < 4 ? left_notes_[encoder] : right_notes_[encoder - 4];
     uint8_t current_index = GetIndexFromNote(current_note);
     
@@ -229,11 +276,9 @@ void PitchPage::UpdateDisplay() {
     if(modal_visible_) {
         if(modal_region.dirty) {
             DrawModal();
-            // pots_->Freeze();
             display_->DrawRegion(modal_region.x, modal_region.y,
                                modal_region.w, modal_region.h,
                                modal_region.data);
-            // pots_->Unfreeze();
             modal_region.dirty = 0;
         }
         return; // Skip updating other regions
@@ -241,24 +286,21 @@ void PitchPage::UpdateDisplay() {
 
     // Draw regions in order: header -> content -> footer -> modal
     if(header_region.dirty) {
-        // pots_->Freeze();
         display_->DrawRegion(header_region.x, header_region.y,
                            header_region.w, header_region.h,
                            header_region.data);
-        // pots_->Unfreeze();
         header_region.dirty = 0;
     }
 
     if(content_region.dirty) {
         region_fill(&content_region, 0x0);
-        DrawSliders();
-        DrawNotes();
+        DrawNotes();     // Сначала рисуем ноты
+        DrawSliders();   // Затем слайдеры под ними
+        DrawIcons();     // Добавляем отрисовку иконок
         
-        // pots_->Freeze();
         display_->DrawRegion(content_region.x, content_region.y,
                            content_region.w, content_region.h,
                            content_region.data);
-        // pots_->Unfreeze();
         content_region.dirty = 0;
     }
 
@@ -267,29 +309,25 @@ void PitchPage::UpdateDisplay() {
         DrawFooterSlider();
         UpdateFooterValues();
         
-        // pots_->Freeze();
         display_->DrawRegion(footer_region_.x, footer_region_.y,
                            footer_region_.w, footer_region_.h,
                            footer_region_.data);
-        // pots_->Unfreeze();
         footer_region_.dirty = 0;
     }
 
     // Draw modal last if visible
     if(modal_visible_ && modal_region.dirty) {
         DrawModal();
-        // pots_->Freeze();
         display_->DrawRegion(modal_region.x, modal_region.y,
                            modal_region.w, modal_region.h,
                            modal_region.data);
-        // pots_->Unfreeze();
         modal_region.dirty = 0;
     }
 }
 
 void PitchPage::OnEnterPage() {
     is_active_ = true;
-    draw_context_.is_active = true;  // Set active state
+    draw_context_.is_active = true;
     
     // Clear all regions
     region_fill(&header_region, 0x0);
@@ -304,15 +342,18 @@ void PitchPage::OnEnterPage() {
     modal_region.dirty = 1;
 
     // Draw initial content
-    region_string(&header_region, "PITCH", 2, 2, 0xf, 0x0, 0);
-    region_string(&header_region, "C MINOR", 34, 2, 0xf, 0x0, 0);
+    region_string(&header_region, "PITCH", 2, 0, 0xf, 0x0, 0);
+    region_string(&header_region, "C MINOR", 34, 0, 0xf, 0x0, 0);
 
-    DrawSliders();
-    DrawNotes();
+    // Draw all content region elements before updating display
+    DrawNotes();     // Сначала ноты
+    DrawSliders();   // Затем слайдеры
+    DrawIcons();     // И иконки
+    
     DrawFooterSlider();
     UpdateFooterValues();
 
-    // Force immediate display update
+    // Force immediate display update after all drawing is complete
     display_->DrawRegion(header_region.x, header_region.y,
                       header_region.w, header_region.h,
                       header_region.data);
@@ -324,6 +365,7 @@ void PitchPage::OnEnterPage() {
     display_->DrawRegion(footer_region_.x, footer_region_.y,
                       footer_region_.w, footer_region_.h,
                       footer_region_.data);
+
 }
 
 void PitchPage::OnExitPage() {
@@ -376,26 +418,22 @@ uint8_t PitchPage::GetIndexFromNote(const Note& note) {
 }
 
 void PitchPage::RenderNote(const Note& note, uint32_t x_offset, uint32_t y_offset) {
-    // Используем правильное приведение типов
-    char note_str[3] = {
-        note.base, 
-        static_cast<char>('0' + note.octave), 
-        0
-    };
-  
-  // Подвигаем ноты ближе к нижней части региона
-  uint32_t text_y = content_region.h - 8; // 8 пикселей от низа
-  
-  if(note.sharp) {
-    // Рисуем подчеркивание над текстом
-    region_fill_part(&content_region, 
-                    (text_y - 2) * content_region.w + x_offset, // На 2 пикселя выше текста
-                    9, // Длина подчеркивания
-                    0xFF); // Белый цвет
-  }
-  
-  // Отрисовываем текст ноты
-  region_string(&content_region, note_str, x_offset, text_y, 0xf, 0x0, 0);
+    // Формируем строку с нотой, включая # для диеза
+    char note_str[4];
+    if(note.sharp) {
+        note_str[0] = note.base;
+        note_str[1] = '#';
+        note_str[2] = static_cast<char>('0' + note.octave);
+        note_str[3] = 0;
+        // Диезные ноты рисуем без дополнительного смещения
+        region_string(&content_region, note_str, x_offset, y_offset, 0xf, 0x0, 0);
+    } else {
+        note_str[0] = note.base;
+        note_str[1] = static_cast<char>('0' + note.octave);
+        note_str[2] = 0;
+        // Не диезные ноты сдвигаем на 4 пикселя вправо для центрирования
+        region_string(&content_region, note_str, x_offset + 3, y_offset, 0xf, 0x0, 0);
+    }
 }
 
 void PitchPage::DrawFooterSlider() {
@@ -418,29 +456,77 @@ void PitchPage::DrawFooterSlider() {
 }
 
 void PitchPage::UpdateFooterValues() {
-    // Use footer_.value_a / footer_.value_b
-    char str_a[5];
-    char str_b[5];
+    // Формируем только строки со значениями (без букв A/B)
+    char value_a[4];
+    char value_b[4];
 
     if(footer_.value_a == 0) {
-        snprintf(str_a, sizeof(str_a), "A0");
+        snprintf(value_a, sizeof(value_a), "0");
     } else {
-        snprintf(str_a, sizeof(str_a), "A%d%c", abs(footer_.value_a),
+        snprintf(value_a, sizeof(value_a), "%d%c", abs(footer_.value_a),
                  footer_.value_a > 0 ? '+' : '-');
     }
 
     if(footer_.value_b == 0) {
-        snprintf(str_b, sizeof(str_b), "B0");
+        snprintf(value_b, sizeof(value_b), "0");
     } else {
-        snprintf(str_b, sizeof(str_b), "B%d%c", abs(footer_.value_b),
+        snprintf(value_b, sizeof(value_b), "%d%c", abs(footer_.value_b),
                  footer_.value_b > 0 ? '+' : '-');
     }
 
+    // Очищаем весь футер
     region_fill(&footer_region_, 0x00);
-    DrawFooterSlider();
-    region_string(&footer_region_, "SCALE", 52, 11, 0xf, 0x0, 0);
-    region_string_font2(&footer_region_, str_a, 20, 4, 0xf, 0x0);
-    region_string_font2(&footer_region_, str_b, 90, 4, 0xf, 0x0);
+
+    static constexpr uint8_t BLOCK_WIDTH = 38;
+    static constexpr uint8_t BLOCK_HEIGHT = 17;
+    static constexpr uint8_t MARGIN = 2;
+    static constexpr uint8_t TEXT_MARGIN = 2; // Отступ для текста
+    static constexpr uint8_t VALUE_Y_OFFSET = 0; // Смещение для значений сверху
+
+    // Рисуем белые блоки
+    for(uint32_t y = 0; y < BLOCK_HEIGHT; y++) {
+        // Левый блок
+        region_fill_part(&footer_region_, 
+                        y * footer_region_.w + MARGIN, 
+                        BLOCK_WIDTH, 
+                        0xFF);
+        // Правый блок
+        region_fill_part(&footer_region_, 
+                        y * footer_region_.w + (footer_region_.w - MARGIN - BLOCK_WIDTH), 
+                        BLOCK_WIDTH, 
+                        0xFF);
+    }
+
+    // Рисуем статичные буквы A и B большим шрифтом
+    region_string_big(&footer_region_, "A", MARGIN + 2, 2, 0xF, 0x0, 1);
+    region_string_big(&footer_region_, "B", 
+                     footer_region_.w - (FONT2_CHARW - 3), 
+                     2, 0xF, 0x0, 1);
+
+    // "TUNE" в левом блоке (прибит к правому нижнему углу)
+    region_string(&footer_region_, "TUNE",
+                 MARGIN + BLOCK_WIDTH - 17, // 20 - примерная ширина слова "TUNE"
+                 BLOCK_HEIGHT - FONT_CHARH - TEXT_MARGIN,
+                 0x0, 0xF, 0);
+
+    // "TUNE" в правом блоке (прибит к левому нижнему углу)
+    region_string(&footer_region_, "TUNE",
+                 footer_region_.w - MARGIN - BLOCK_WIDTH + TEXT_MARGIN,
+                 BLOCK_HEIGHT - FONT_CHARH - TEXT_MARGIN,
+                 0x0, 0xF, 0);
+
+    // Value A в левом блоке (прибит к правому верхнему углу)
+    uint32_t value_a_x = MARGIN + BLOCK_WIDTH - (strlen(value_a) * 4) - TEXT_MARGIN + 1; // Добавили +1 для смещения вправо
+    region_string(&footer_region_, value_a,
+                 value_a_x,
+                 VALUE_Y_OFFSET, // Используем новое смещение
+                 0x0, 0xF, 0);
+
+    // Value B в правом блоке (прибит к левому верхнему углу)
+    region_string(&footer_region_, value_b,
+                 footer_region_.w - MARGIN - BLOCK_WIDTH + TEXT_MARGIN,
+                 VALUE_Y_OFFSET, // Используем новое смещение
+                 0x0, 0xF, 0);
 }
 
 void PitchPage::UpdatePatchNote(const Note& note, plaits::Patch* patch) {
@@ -530,15 +616,44 @@ void PitchPage::Footer::Update() {
 
 void PitchPage::UpdateRegions() {
     if(header_region.dirty) {
-        // pots_->Freeze();
         display_->DrawRegion(header_region.x, header_region.y,
                            header_region.w, header_region.h,
                            header_region.data);
-        // pots_->Unfreeze();
         header_region.dirty = 0;
     }
 
     // ...similarly update content and footer regions...
 }
 
+void PitchPage::DrawIcons() {
+    static constexpr uint8_t PATTERN_SPACING = 12;
+    static constexpr uint8_t GROUP_SPACING = 6;
+    static constexpr uint8_t PATTERN_LEFT_OFFSET = 5;
+    static constexpr uint8_t NUM_PATTERNS = 4;
+    static constexpr uint8_t ICON_Y_OFFSET = 27; // Позиция иконок под слайдерами
+    
+    // Рисуем первую группу иконок
+    for(uint8_t i = 0; i < NUM_PATTERNS; i++) {
+        uint32_t x_offset = PATTERN_LEFT_OFFSET + (i * (3 + PATTERN_SPACING));
+        font_glyph_icon('0' + i, 
+                       content_region.data + (ICON_Y_OFFSET * content_region.w + x_offset),
+                       content_region.w,
+                       0xF, 0x0);
+    }
+
+    // Рисуем вторую группу иконок
+    uint32_t second_group_start = PATTERN_LEFT_OFFSET + 
+                                 (NUM_PATTERNS * (3 + PATTERN_SPACING)) + 
+                                 GROUP_SPACING;
+                               
+    for(uint8_t i = 0; i < NUM_PATTERNS; i++) {
+        uint32_t x_offset = second_group_start + (i * (3 + PATTERN_SPACING));
+        font_glyph_icon('4' + i,
+                       content_region.data + (ICON_Y_OFFSET * content_region.w + x_offset),
+                       content_region.w,
+                       0xF, 0x0);
+    }
+}
+
 }  // namespace t8synth
+

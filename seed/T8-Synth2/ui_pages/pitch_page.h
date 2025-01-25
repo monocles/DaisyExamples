@@ -18,7 +18,7 @@ struct DisplayLayout {
     static constexpr uint8_t SCREEN_WIDTH = 128;
     static constexpr uint8_t SCREEN_HEIGHT = 64;
     static constexpr uint8_t HEADER_HEIGHT = 9;
-    static constexpr uint8_t CONTENT_HEIGHT = 34;
+    static constexpr uint8_t CONTENT_HEIGHT = 36;
 };
 
 struct ModalConfig {
@@ -94,6 +94,7 @@ private:
     void RenderNote(const Note& note, uint32_t x_offset, uint32_t y_offset);
     void DrawFooterSlider();
     void UpdateFooterValues();
+    void DrawIcons();  // Add new method declaration
 
     // Modal methods
     void ShowNoteModal(const Note& note);
@@ -129,6 +130,8 @@ private:
         void Update();
         void Draw(region& reg);
     } footer_;
+
+    uint8_t current_encoder_{0};  // Добавьте это поле
 };
 
 } // namespace t8synth

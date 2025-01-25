@@ -44,9 +44,7 @@ void Ui::Poll() {
     system_clock.Tick();
     uint32_t now = system_clock.milliseconds();
     ++sub_clock_;
-    
-    // pots_->Update();
-    
+        
     // Обрабатываем энкодеры и кнопки только если есть новые данные
     if(encoders_->HasNewData()) {
         encoders_->ProcessEncoders(); 
@@ -94,7 +92,6 @@ void Ui::Poll() {
 
 void Ui::ShowPage(UiPageNumber page) {
     if(current_page_) {
-        pots_->Freeze();
         current_page_->OnExitPage();
     }
     
@@ -110,7 +107,6 @@ void Ui::ShowPage(UiPageNumber page) {
         // Обновляем дисплей сразу после входа на страницу
         current_page_->UpdateDisplay();
         
-        pots_->Unfreeze();
     }
 }
 

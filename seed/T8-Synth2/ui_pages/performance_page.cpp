@@ -34,7 +34,7 @@ void PerformancePage::OnInit() {
   region_fill(&test_region_, 0x0);
   
   // Используйте правильные отступы для большего шрифта
-  region_string_font2(&test_region_, "123 TEST", 0, 0, 0xf, 0x0);
+  region_string_big(&test_region_, "123 TEST", 0, 0, 0xf, 0x0);
   
   // Обновите отображение
   display_->DrawRegion(test_region_.x, test_region_.y, 

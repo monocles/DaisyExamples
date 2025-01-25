@@ -50,16 +50,16 @@
 // #include "dsp/engine/particle_engine.h"
 // #include "dsp/engine/snare_drum_engine.h"
 // #include "dsp/engine/speech_engine.h"
-#include "dsp/engine/string_engine.h"
+// #include "dsp/engine/string_engine.h"
 // #include "dsp/engine/swarm_engine.h"
 // #include "dsp/engine/virtual_analog_engine.h"
 // #include "dsp/engine/waveshaping_engine.h"
-#include "dsp/engine/wavetable_engine.h"
+// #include "dsp/engine/wavetable_engine.h"
 
 // #include "dsp/engine2/chiptune_engine.h"
 // #include "dsp/engine2/phase_distortion_engine.h"
 // #include "dsp/engine2/six_op_engine.h"
-#include "dsp/engine2/string_machine_engine.h"
+// #include "dsp/engine2/string_machine_engine.h"
 #include "dsp/engine2/virtual_analog_vcf_engine.h"
 // #include "dsp/engine2/wave_terrain_engine.h"
 
@@ -212,14 +212,14 @@ class Voice {
   // FMEngine fm_engine_;
   // GrainEngine grain_engine_;
   // AdditiveEngine additive_engine_;
-  WavetableEngine wavetable_engine_;
+  // WavetableEngine wavetable_engine_;
   // ChordEngine chord_engine_;
   // SpeechEngine speech_engine_;
 
   // SwarmEngine swarm_engine_;
   // NoiseEngine noise_engine_;
   // ParticleEngine particle_engine_;
-  StringEngine string_engine_;
+  // StringEngine string_engine_;
   // ModalEngine modal_engine_;
   // BassDrumEngine bass_drum_engine_;
   // SnareDrumEngine snare_drum_engine_;
@@ -229,7 +229,7 @@ class Voice {
   // PhaseDistortionEngine phase_distortion_engine_;
   // SixOpEngine six_op_engine_;
   // WaveTerrainEngine wave_terrain_engine_;
-  StringMachineEngine string_machine_engine_;
+  // StringMachineEngine string_machine_engine_;
   // ChiptuneEngine chiptune_engine_;
 
   stmlib::HysteresisQuantizer2 engine_quantizer_;

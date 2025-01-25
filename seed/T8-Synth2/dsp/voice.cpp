@@ -84,7 +84,7 @@ void Voice::Init(BufferAllocator* allocator) {
   trigger_state_ = false;
   previous_note_ = 0.0f;
   
-  trigger_delay_.Init(trigger_delay_line_);
+  trigger_delay_.Init();  // Simply call Init() without arguments
 }
 
 void Voice::Render(
