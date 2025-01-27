@@ -9,11 +9,11 @@
 #include "dsp/voice.h"
 #include "ui_pages/ui_page.h"
 #include "voice_manager.h"  // Add this include
+#include "daisysp.h"
 
 extern daisy::DaisySeed hw;
 
 using namespace stmlib;
-
 // Типы страниц UI
 enum UiPageNumber {
   PAGE_PERFORMANCE,
@@ -49,9 +49,9 @@ class Ui {
   plaits::Voice* voice_;
   plaits::Modulations* modulations_;
 
-  static constexpr size_t NUM_VOICES = 4;
-  plaits::Patch* patches_[NUM_VOICES]{nullptr};
-  plaits::Voice* voices_[NUM_VOICES]{nullptr};
+  // static constexpr size_t NUM_VOICES = 8;
+  plaits::Patch* patches_[VoiceManager::NUM_VOICES]{nullptr};
+  plaits::Voice* voices_[VoiceManager::NUM_VOICES]{nullptr};
   
   VoiceManager* voice_manager_{nullptr};
   
@@ -65,6 +65,9 @@ class Ui {
   // Page management  
   t8synth::UiPage* current_page_{nullptr};
   t8synth::UiPage* pages_[PAGE_LAST];
+
+  bool volume_mode_{false}; // Add volume mode flag
+  float encoder_volumes_[VoiceManager::NUM_VOICES]{0.0f}; // Используем NUM_VOICES из VoiceManager
 
   // // Добавляем переменные для контроля частоты обновления дисплея
   // uint32_t last_display_update_{0};

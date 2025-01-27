@@ -4,6 +4,7 @@
 #include "ui_pages/pitch_page.h"
 
 const int32_t kLongPressDuration = 1000;
+using namespace daisysp;
 
 void Ui::Init(EncoderController* encoders, DisplayController* display, 
             VoiceManager* voices,
@@ -14,7 +15,7 @@ void Ui::Init(EncoderController* encoders, DisplayController* display,
     voice_manager_ = voices;
     modulations_ = modulations;
 
-    // Инициализируем массивы указателей на все 8 голосов
+    // Инициализируем массивы указателей на все голоса
     for(size_t i = 0; i < VoiceManager::NUM_VOICES; i++) {
         auto& voice_unit = voices->GetVoice(i);
         patches_[i] = &voice_unit.patch;
@@ -115,8 +116,29 @@ void Ui::HandlePageEvent(const Event& e) {
     
     switch(e.control_type) {
         case CONTROL_ENCODER:
-            hw.PrintLine("Encoder %d: %d", e.control_id, e.data);
-            current_page_->OnEncoder(e.control_id, e.data);
+            if(volume_mode_ && e.control_id < 8) {
+                auto& voice = voice_manager_->GetVoice(e.control_id);
+                
+                // Используем нелинейное отображение для более музыкального изменения громкости
+                float normalized_volume = encoder_volumes_[e.control_id];
+                
+                if(e.data < 0) {
+                    normalized_volume = daisysp::fmax(0.0f, normalized_volume - 0.02f);
+                } else {
+                    normalized_volume = daisysp::fmin(1.0f, normalized_volume + 0.02f);
+                }
+                
+                encoder_volumes_[e.control_id] = normalized_volume;
+                
+                // Применяем экспоненциальную кривую для более естественного изменения громкости
+                voice.volume = daisysp::fmap(normalized_volume, 0.0f, 1.0f, daisysp::Mapping::EXP);
+                
+                // Выводим значение в процентах
+                int volume_percent = static_cast<int>(normalized_volume * 100.0f);
+                hw.PrintLine("Voice %d volume: %d%%", e.control_id, volume_percent);
+            } else {
+                current_page_->OnEncoder(e.control_id, e.data);
+            }
             break;
             
         case CONTROL_ENCODER_CLICK:
@@ -133,14 +155,23 @@ void Ui::HandlePageEvent(const Event& e) {
             hw.PrintLine("Switch %d: %d", e.control_id, e.data);
             using BTN = EncoderController::ButtonIndex;
             if(e.control_id == BTN::VOICE_BUTTON) {
+                volume_mode_ = false; // Reset volume mode when switching pages
                 hw.PrintLine("Switch to voice page");
                 ShowPage(PAGE_PERFORMANCE);
                 return;
             }
-            if(e.control_id == BTN::PITCH_BUTTON) {
-                hw.PrintLine("Switch to pitch page");
-                ShowPage(PAGE_PITCH);
-                return;
+            if(e.control_id == BTN::PITCH_BUTTON && e.data > 0) {
+                volume_mode_ = !volume_mode_;
+                hw.PrintLine("Volume mode: %s", volume_mode_ ? "ON" : "OFF");
+                if(volume_mode_) {
+                    // При входе в режим громкости синхронизируем значения с текущими громкостями голосов
+                    for(size_t i = 0; i < 8; i++) {
+                        encoder_volumes_[i] = voice_manager_->GetVoice(i).volume;
+                        hw.PrintLine("Voice %d volume: %d%%", i, (int)(encoder_volumes_[i] * 100.0f));
+                    }
+                } else {
+                    ShowPage(PAGE_PITCH);
+                }
             }
             if(e.control_id == BTN::CLEAR_BUTTON) {
                 __disable_irq();
@@ -179,7 +210,7 @@ void Ui::DoEvents() {
     //     System::DelayUs(50);
     // }
     if(current_page_ ) {
-        hw.PrintLine("Update display");
+        // hw.PrintLine("Update display");
         current_page_->UpdateDisplay();
         // next_display_update = now + DISPLAY_UPDATE_INTERVAL;
         // System::DelayUs(50);

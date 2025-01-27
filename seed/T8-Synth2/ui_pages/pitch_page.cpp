@@ -20,50 +20,26 @@ void PitchPage::OnInit() {
     InitRegions();
     InitNotes();
     UpdateFooterValues();  // Use direct method instead of footer_.Update()
+    modal_window_.Init(display_); // Инициализируем модальное окно
+    modal_window_.SetOnCloseCallback([](void* context) {
+        auto page = static_cast<PitchPage*>(context);
+        // Помечаем все регионы для перерисовки при закрытии модального окна
+        page->header_region.dirty = 1;
+        page->content_region.dirty = 1;
+        page->footer_region_.dirty = 1;
+    }, this);
+    icons_renderer_.Init(&content_region);
+    sliders_renderer_.Init(&content_region); // Инициализируем рендерер слайдеров
+    
+    // Устанавливаем глифы для каждой иконки
+    for(uint8_t i = 0; i < IconsRenderer::NUM_ICONS; i++) {
+        icons_renderer_.SetGlyph(i, '0' + i);
+    }
 }
 
 void PitchPage::DrawSliders() {
-    // static constexpr uint8_t PATTERN_HEIGHT = 16;
-    static constexpr uint8_t PATTERN_SPACING = 12;
-    static constexpr uint8_t GROUP_SPACING = 6;
-    static constexpr uint8_t PATTERN_LEFT_OFFSET = 8;
-    static constexpr uint8_t NUM_PATTERNS = 4;
-    
-    // Начинаем рисовать слайдеры с отступом в 1 пиксель от верхней границы нот
-    uint32_t start_y = 9; // 8 пикселей на ноты + 1 пиксель отступ
-    
-    // Рисуем первую группу из 4 паттернов
-    for(uint8_t pattern = 0; pattern < NUM_PATTERNS; pattern++) {
-        uint32_t x_offset = PATTERN_LEFT_OFFSET + (pattern * (3 + PATTERN_SPACING));
-        DrawSlider(x_offset, start_y);
-    }
-
-    // Рисуем вторую группу из 4 паттернов с дополнительным отступом
-    uint32_t second_group_start = PATTERN_LEFT_OFFSET + 
-                                 (NUM_PATTERNS * (3 + PATTERN_SPACING)) + 
-                                 GROUP_SPACING;
-                               
-    for(uint8_t pattern = 0; pattern < NUM_PATTERNS; pattern++) {
-        uint32_t x_offset = second_group_start + (pattern * (3 + PATTERN_SPACING));
-        DrawSlider(x_offset, start_y);
-    }
-}
-
-// Вспомогательный метод для отрисовки одного паттерна
-void PitchPage::DrawSlider(uint32_t x_offset, uint32_t start_y) {
-  static constexpr uint8_t PATTERN_HEIGHT = 16;
-  
-  for(int y = 0; y < PATTERN_HEIGHT; y++) {
-    uint32_t row_offset = (start_y + y) * content_region.w + x_offset;
-    
-    if(y % 2 == 0) {
-      region_fill_part(&content_region, row_offset, 1, 0xFF);     // o
-      region_fill_part(&content_region, row_offset + 1, 1, 0x00); // x
-      region_fill_part(&content_region, row_offset + 2, 1, 0xFF); // o
-    } else {
-      region_fill_part(&content_region, row_offset, 3, 0x00);     // xxx
-    }
-  }
+    static constexpr uint8_t SLIDER_Y_OFFSET = 9;
+    sliders_renderer_.Draw(SLIDER_Y_OFFSET);
 }
 
 void PitchPage::DrawNotes() {
@@ -90,201 +66,29 @@ void PitchPage::DrawNotes() {
 }
 
 void PitchPage::ShowNoteModal(const Note& note) {
-    bool note_changed = !modal_visible_ || 
-                       current_modal_note_.base != note.base || 
-                       current_modal_note_.octave != note.octave ||
-                       current_modal_note_.sharp != note.sharp;
-    
-    last_note_change_time_ = system_clock.milliseconds();
-    
-    if(!modal_visible_) {
-        // Сохраняем текущее состояние экрана перед показом модального окна
-        current_modal_note_ = note;
-        modal_visible_ = true;
-        region_fill(&modal_region, 0x0);
-        DrawModalFrame();
-        DrawModalContent();
-        modal_region.dirty = 1;
-    } else if(note_changed) {
-        // Обновляем только содержимое модального окна
-        current_modal_note_ = note;
-        DrawModalContent();
-        modal_region.dirty = 1;
-    }
-}
-
-void PitchPage::DrawModalFrame() {
-    // Draw border
-    for(uint32_t x = 0; x < MODAL_WIDTH; x++) {
-        region_fill_part(&modal_region, x, 1, 0xFF);
-        region_fill_part(&modal_region, (MODAL_HEIGHT-1) * MODAL_WIDTH + x, 1, 0xFF);
-    }
-    
-    for(uint32_t y = 0; y < MODAL_HEIGHT; y++) {
-        region_fill_part(&modal_region, y * MODAL_WIDTH, 1, 0xFF);
-        region_fill_part(&modal_region, y * MODAL_WIDTH + MODAL_WIDTH - 1, 1, 0xFF);
-    }
-}
-
-void PitchPage::DrawModalContent() {
-    // Очищаем только внутреннюю область
-    for(uint32_t y = 1; y < MODAL_HEIGHT-1; y++) {
-        region_fill_part(&modal_region, 
-                        y * MODAL_WIDTH + 1, 
-                        MODAL_WIDTH - 2, 
-                        0x0);
-    }
-    
-    char note_str[4];
-    if(current_modal_note_.sharp) {
-        note_str[0] = current_modal_note_.base;
-        note_str[1] = '#';
-        note_str[2] = '0' + current_modal_note_.octave;
-        note_str[3] = 0;
-    } else {
-        note_str[0] = current_modal_note_.base;
-        note_str[1] = '0' + current_modal_note_.octave;
-        note_str[2] = 0;
-    }
-
-    // Отступ слева
-    static constexpr uint8_t LEFT_PADDING = 8;
-    // Отступ снизу для ноты
-    static constexpr uint8_t BOTTOM_PADDING = 8;
-    // Отступ между "NOTE:" и нотой
-    static constexpr uint8_t VERTICAL_SPACING = 4;
-
-    // Позиция для ноты (в левом нижнем углу)
-    uint32_t note_y = MODAL_HEIGHT - FONT2_CHARH - BOTTOM_PADDING;
-
-    // Позиция для текста "NOTE:" (над нотой)
-    uint32_t label_y = note_y - FONT_CHARH - VERTICAL_SPACING;
-
-    // Рендерим "NOTE:" стандартным шрифтом
-    region_string(&modal_region, "NOTE:", LEFT_PADDING, label_y, 0xF, 0x0, 0);
-    
-    // Рендерим саму ноту большим шрифтом
-    region_string_big(&modal_region, note_str, LEFT_PADDING, note_y, 0x0, 0xF, 1);
-
-    // Рисуем белый квадрат в правом верхнем углу
-    static constexpr uint8_t SQUARE_WIDTH = 11;  // Ширина 11
-    static constexpr uint8_t SQUARE_HEIGHT = 9; // Высота 10 
-    static constexpr uint8_t RIGHT_PADDING = 9;
-    static constexpr uint8_t TOP_PADDING = 7;
-    
-    // Позиция квадрата
-    uint32_t square_x = MODAL_WIDTH - SQUARE_WIDTH - RIGHT_PADDING;
-    uint32_t square_y = TOP_PADDING;
-
-    // Рисуем белый квадрат
-    for(uint32_t y = 0; y < SQUARE_HEIGHT; y++) {
-        region_fill_part(&modal_region,
-                        (square_y + y) * MODAL_WIDTH + square_x,
-                        SQUARE_WIDTH,
-                        0xFF);
-    }
-
-    // Формируем строку с названием элемента (A1-A4 или B1-B4)
-    char element_str[3];
-    element_str[0] = current_encoder_ < 4 ? 'A' : 'B';
-    element_str[1] = '1' + (current_encoder_ % 4);
-    element_str[2] = 0;
-
-    // Центрируем текст в квадрате с учетом разных размеров по ширине и высоте
-    uint32_t text_x = square_x + (SQUARE_WIDTH - 7) / 2;  
-    uint32_t text_y = square_y + (SQUARE_HEIGHT - 8) / 2;
-
-    // Рендерим название элемента черным по белому
-    region_string(&modal_region, element_str, text_x, text_y, 0x0, 0xFF, 0);
-}
-
-void PitchPage::DrawModal() {
-    if(!modal_visible_) return;
-    DrawModalFrame();
-    DrawModalContent();
-}
-
-void PitchPage::UpdateModal() {
-    if(modal_visible_) {
-        uint32_t now = system_clock.milliseconds();
-        if(now - last_note_change_time_ >= MODAL_HIDE_DELAY_MS) {
-            modal_visible_ = false;
-            // Mark other regions only after modal closes
-            header_region.dirty = 1;
-            content_region.dirty = 1;
-            footer_region_.dirty = 1;
-        }
-    }
-}
-
-void PitchPage::UpdateNoteByEncoder(uint8_t encoder, int32_t increment) {
-    current_encoder_ = encoder;  // Обновляем current_encoder_ и здесь для надежности
-    Note& current_note = encoder < 4 ? left_notes_[encoder] : right_notes_[encoder - 4];
-    uint8_t current_index = GetIndexFromNote(current_note);
-    
-    int new_index = current_index + increment;
-    if(new_index < 0) new_index = 0;
-    uint8_t max_index = (MAX_OCTAVE - MIN_OCTAVE + 1) * NOTES_PER_OCTAVE - 1;
-    if(new_index > max_index) new_index = max_index;
-    
-    GetNoteFromIndex(new_index, current_note);
-    ShowNoteModal(current_note); // Show modal when note changes
-}
-
-void PitchPage::OnEncoder(uint8_t encoder, int32_t increment) {
-    if(!draw_context_.is_active) return;
-
-    if(encoder < 8) {
-        // Voice encoders
-        UpdateNote(encoder, increment);
-    }
-    else {
-        // Mod encoders
-        using ENC = EncoderController::EncoderIndex;
-        if(encoder == ENC::ENC_MOD_A || encoder == ENC::ENC_MOD_B) {
-            if(modal_visible_) {
-                modal_visible_ = false;
-                header_region.dirty = 1;
-                content_region.dirty = 1;
-                footer_region_.dirty = 1;
-            }
-            if(encoder == ENC::ENC_MOD_A) {
-                footer_.value_a = fclamp(footer_.value_a + increment, -12, 12);
-                UpdateAllVoicePitches();
-            }
-            else if(encoder == ENC::ENC_MOD_B) {
-                footer_.value_b = fclamp(footer_.value_b + increment, -12, 12);
-            }
-            footer_.Update();
-            footer_region_.dirty = 1; // Fixed: using footer_region_ instead of regions_.footer
-        }
-    }
-}
-
-void PitchPage::OnSwitch(uint8_t sw, bool pressed) {
-  if(!is_active_) return;
-
-  needs_redraw_ = true;
+    modal_window_.SetPitchData(note.base, note.octave, note.sharp, current_encoder_);
+    modal_window_.Show(ModalType::PITCH_MODAL);
 }
 
 void PitchPage::UpdateDisplay() {
     if(!is_active_ || !draw_context_.is_active) return;
 
-    UpdateModal();
+    modal_window_.Update(system_clock.milliseconds());
 
-    // If modal is still visible, update only modal content
-    if(modal_visible_) {
-        if(modal_region.dirty) {
-            DrawModal();
-            display_->DrawRegion(modal_region.x, modal_region.y,
-                               modal_region.w, modal_region.h,
-                               modal_region.data);
-            modal_region.dirty = 0;
+    if(modal_window_.IsVisible()) {
+        if(modal_window_.GetRegion().dirty) {
+            modal_window_.Draw();
+            display_->DrawRegion(modal_window_.GetRegion().x, 
+                               modal_window_.GetRegion().y,
+                               modal_window_.GetRegion().w, 
+                               modal_window_.GetRegion().h,
+                               modal_window_.GetRegion().data);
+            modal_window_.GetRegion().dirty = 0;
         }
-        return; // Skip updating other regions
+        return;
     }
 
-    // Draw regions in order: header -> content -> footer -> modal
+    // Draw regions in order: header -> content -> footer
     if(header_region.dirty) {
         display_->DrawRegion(header_region.x, header_region.y,
                            header_region.w, header_region.h,
@@ -314,15 +118,39 @@ void PitchPage::UpdateDisplay() {
                            footer_region_.data);
         footer_region_.dirty = 0;
     }
+}
 
-    // Draw modal last if visible
-    if(modal_visible_ && modal_region.dirty) {
-        DrawModal();
-        display_->DrawRegion(modal_region.x, modal_region.y,
-                           modal_region.w, modal_region.h,
-                           modal_region.data);
-        modal_region.dirty = 0;
+void PitchPage::OnEncoder(uint8_t encoder, int32_t increment) {
+    if(!draw_context_.is_active) return;
+
+    if(encoder < 8) {
+        // Voice encoders
+        UpdateNote(encoder, increment);
     }
+    else {
+        // Mod encoders
+        using ENC = EncoderController::EncoderIndex;
+        if(encoder == ENC::ENC_MOD_A || encoder == ENC::ENC_MOD_B) {
+            // Сразу закрываем модальное окно при работе с футером
+            modal_window_.Hide();
+            
+            if(encoder == ENC::ENC_MOD_A) {
+                footer_.value_a = fclamp(footer_.value_a + increment, -12, 12);
+                UpdateAllVoicePitches();
+            }
+            else if(encoder == ENC::ENC_MOD_B) {
+                footer_.value_b = fclamp(footer_.value_b + increment, -12, 12);
+            }
+            footer_.Update();
+            footer_region_.dirty = 1;
+        }
+    }
+}
+
+void PitchPage::OnSwitch(uint8_t sw, bool pressed) {
+  if(!is_active_) return;
+
+  needs_redraw_ = true;
 }
 
 void PitchPage::OnEnterPage() {
@@ -333,13 +161,11 @@ void PitchPage::OnEnterPage() {
     region_fill(&header_region, 0x0);
     region_fill(&content_region, 0x0);
     region_fill(&footer_region_, 0x0);
-    region_fill(&modal_region, 0x0);
 
     // Mark all regions as dirty
     header_region.dirty = 1;
     content_region.dirty = 1;
     footer_region_.dirty = 1;
-    modal_region.dirty = 1;
 
     // Draw initial content
     region_string(&header_region, "PITCH", 2, 0, 0xf, 0x0, 0);
@@ -369,7 +195,6 @@ void PitchPage::OnEnterPage() {
 }
 
 void PitchPage::OnExitPage() {
-    modal_visible_ = false;
     is_active_ = false;
     draw_context_.is_active = false;
 }
@@ -577,13 +402,6 @@ void PitchPage::InitRegions() {
     footer_region_.x = 0;
     footer_region_.y = header_region.h + content_region.h;
     region_alloc(&footer_region_);
-
-    // Initialize modal
-    modal_region.w = ModalConfig::WIDTH;
-    modal_region.h = ModalConfig::HEIGHT;
-    modal_region.x = (DisplayLayout::SCREEN_WIDTH - ModalConfig::WIDTH) / 2;
-    modal_region.y = (DisplayLayout::SCREEN_HEIGHT - ModalConfig::HEIGHT) / 2;
-    region_alloc(&modal_region);
 }
 
 void PitchPage::InitNotes() {
@@ -626,33 +444,23 @@ void PitchPage::UpdateRegions() {
 }
 
 void PitchPage::DrawIcons() {
-    static constexpr uint8_t PATTERN_SPACING = 12;
-    static constexpr uint8_t GROUP_SPACING = 6;
-    static constexpr uint8_t PATTERN_LEFT_OFFSET = 5;
-    static constexpr uint8_t NUM_PATTERNS = 4;
-    static constexpr uint8_t ICON_Y_OFFSET = 27; // Позиция иконок под слайдерами
-    
-    // Рисуем первую группу иконок
-    for(uint8_t i = 0; i < NUM_PATTERNS; i++) {
-        uint32_t x_offset = PATTERN_LEFT_OFFSET + (i * (3 + PATTERN_SPACING));
-        font_glyph_icon('0' + i, 
-                       content_region.data + (ICON_Y_OFFSET * content_region.w + x_offset),
-                       content_region.w,
-                       0xF, 0x0);
-    }
+    static constexpr uint8_t ICON_Y_OFFSET = 27;
+    icons_renderer_.Draw(ICON_Y_OFFSET);
+}
 
-    // Рисуем вторую группу иконок
-    uint32_t second_group_start = PATTERN_LEFT_OFFSET + 
-                                 (NUM_PATTERNS * (3 + PATTERN_SPACING)) + 
-                                 GROUP_SPACING;
-                               
-    for(uint8_t i = 0; i < NUM_PATTERNS; i++) {
-        uint32_t x_offset = second_group_start + (i * (3 + PATTERN_SPACING));
-        font_glyph_icon('4' + i,
-                       content_region.data + (ICON_Y_OFFSET * content_region.w + x_offset),
-                       content_region.w,
-                       0xF, 0x0);
-    }
+void PitchPage::UpdateNoteByEncoder(uint8_t encoder, int32_t increment) {
+    current_encoder_ = encoder;  // Сохраняем текущий энкодер
+    
+    Note& current_note = encoder < 4 ? left_notes_[encoder] : right_notes_[encoder - 4];
+    uint8_t current_index = GetIndexFromNote(current_note);
+    
+    int new_index = current_index + increment;
+    if(new_index < 0) new_index = 0;
+    uint8_t max_index = (MAX_OCTAVE - MIN_OCTAVE + 1) * NOTES_PER_OCTAVE - 1;
+    if(new_index > max_index) new_index = max_index;
+    
+    GetNoteFromIndex(new_index, current_note);
+    ShowNoteModal(current_note); // Show modal when note changes
 }
 
 }  // namespace t8synth
