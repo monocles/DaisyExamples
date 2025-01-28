@@ -16,22 +16,19 @@ const char* const PitchPage::available_notes_[] = {
 };
 
 void PitchPage::OnInit() {
-    draw_context_.is_active = true;  // Initialize active state
+    state_.is_active = true;
     InitRegions();
     InitNotes();
-    UpdateFooterValues();  // Use direct method instead of footer_.Update()
-    modal_window_.Init(display_); // Инициализируем модальное окно
+    
+    modal_window_.Init(display_);
     modal_window_.SetOnCloseCallback([](void* context) {
         auto page = static_cast<PitchPage*>(context);
-        // Помечаем все регионы для перерисовки при закрытии модального окна
-        page->header_region.dirty = 1;
-        page->content_region.dirty = 1;
-        page->footer_region_.dirty = 1;
+        page->MarkAllRegionsDirty();
     }, this);
-    icons_renderer_.Init(&content_region);
-    sliders_renderer_.Init(&content_region); // Инициализируем рендерер слайдеров
     
-    // Устанавливаем глифы для каждой иконки
+    icons_renderer_.Init(&regions_.content);
+    sliders_renderer_.Init(&regions_.content);
+    
     for(uint8_t i = 0; i < IconsRenderer::NUM_ICONS; i++) {
         icons_renderer_.SetGlyph(i, '0' + i);
     }
@@ -51,7 +48,7 @@ void PitchPage::DrawNotes() {
   // Отрисовка нот для левой группы используя выбранные индексы
   for(uint8_t i = 0; i < NUM_PATTERNS; i++) {
     uint32_t x_offset = PATTERN_LEFT_OFFSET + (i * (3 + PATTERN_SPACING));
-    RenderNote(left_notes_[i], x_offset, 0);
+    RenderNote(notes_.left[i], x_offset, 0);
   }
 
   // Отрисовка правой группы нот
@@ -61,62 +58,41 @@ void PitchPage::DrawNotes() {
 
   for(uint8_t i = 0; i < NUM_PATTERNS; i++) {
     uint32_t x_offset = second_group_start + (i * (3 + PATTERN_SPACING));
-    RenderNote(right_notes_[i], x_offset, 0);
+    RenderNote(notes_.right[i], x_offset, 0);
   }
 }
 
 void PitchPage::ShowNoteModal(const Note& note) {
-    modal_window_.SetPitchData(note.base, note.octave, note.sharp, current_encoder_);
+    modal_window_.SetPitchData(note.base, note.octave, note.sharp, state_.current_encoder);
     modal_window_.Show(ModalType::PITCH_MODAL);
 }
 
 void PitchPage::UpdateDisplay() {
-    if(!is_active_ || !draw_context_.is_active) return;
+    if(!state_.is_active) return;
 
     modal_window_.Update(system_clock.milliseconds());
 
     if(modal_window_.IsVisible()) {
         if(modal_window_.GetRegion().dirty) {
             modal_window_.Draw();
-            display_->DrawRegion(modal_window_.GetRegion().x, 
-                               modal_window_.GetRegion().y,
-                               modal_window_.GetRegion().w, 
-                               modal_window_.GetRegion().h,
-                               modal_window_.GetRegion().data);
-            modal_window_.GetRegion().dirty = 0;
+            UpdateRegion(modal_window_.GetRegion());
         }
         return;
     }
 
-    // Draw regions in order: header -> content -> footer
-    if(header_region.dirty) {
-        display_->DrawRegion(header_region.x, header_region.y,
-                           header_region.w, header_region.h,
-                           header_region.data);
-        header_region.dirty = 0;
+    if(regions_.header.dirty) {
+        RenderHeader();
+        UpdateRegion(regions_.header);
     }
 
-    if(content_region.dirty) {
-        region_fill(&content_region, 0x0);
-        DrawNotes();     // Сначала рисуем ноты
-        DrawSliders();   // Затем слайдеры под ними
-        DrawIcons();     // Добавляем отрисовку иконок
-        
-        display_->DrawRegion(content_region.x, content_region.y,
-                           content_region.w, content_region.h,
-                           content_region.data);
-        content_region.dirty = 0;
+    if(regions_.content.dirty) {
+        RenderContent();
+        UpdateRegion(regions_.content);
     }
 
-    if(footer_region_.dirty) {
-        region_fill(&footer_region_, 0x0);
-        DrawFooterSlider();
-        UpdateFooterValues();
-        
-        display_->DrawRegion(footer_region_.x, footer_region_.y,
-                           footer_region_.w, footer_region_.h,
-                           footer_region_.data);
-        footer_region_.dirty = 0;
+    if(regions_.footer.dirty) {
+        RenderFooter();
+        UpdateRegion(regions_.footer);
     }
 }
 
@@ -141,74 +117,77 @@ void PitchPage::OnEncoder(uint8_t encoder, int32_t increment) {
             else if(encoder == ENC::ENC_MOD_B) {
                 footer_.value_b = fclamp(footer_.value_b + increment, -12, 12);
             }
-            footer_.Update();
-            footer_region_.dirty = 1;
+            regions_.footer.dirty = 1;
         }
     }
 }
 
 void PitchPage::OnSwitch(uint8_t sw, bool pressed) {
-  if(!is_active_) return;
-
-  needs_redraw_ = true;
+    if(!state_.is_active) return;
+    state_.needs_redraw = true;
 }
 
 void PitchPage::OnEnterPage() {
-    is_active_ = true;
+    state_.is_active = true;
     draw_context_.is_active = true;
     
     // Clear all regions
-    region_fill(&header_region, 0x0);
-    region_fill(&content_region, 0x0);
-    region_fill(&footer_region_, 0x0);
+    region_fill(&regions_.header, 0x0);
+    region_fill(&regions_.content, 0x0);
+    region_fill(&regions_.footer, 0x0);
 
     // Mark all regions as dirty
-    header_region.dirty = 1;
-    content_region.dirty = 1;
-    footer_region_.dirty = 1;
+    regions_.header.dirty = 1;
+    regions_.content.dirty = 1;
+    regions_.footer.dirty = 1;
 
     // Draw initial content
-    region_string(&header_region, "PITCH", 2, 0, 0xf, 0x0, 0);
-    region_string(&header_region, "C MINOR", 34, 0, 0xf, 0x0, 0);
+    region_string(&regions_.header, "PITCH", 2, 0, 0xf, 0x0, 0);
+    region_string(&regions_.header, "C MINOR", 34, 0, 0xf, 0x0, 0);
 
     // Draw all content region elements before updating display
     DrawNotes();     // Сначала ноты
     DrawSliders();   // Затем слайдеры
     DrawIcons();     // И иконки
     
-    DrawFooterSlider();
-    UpdateFooterValues();
+    footer_renderer_.DrawFooter(
+        regions_.footer,
+        footer_.labelA,
+        footer_.labelB,
+        footer_.blockLabelA,
+        footer_.blockLabelB,
+        footer_.value_a,
+        footer_.value_b
+    );
 
     // Force immediate display update after all drawing is complete
-    display_->DrawRegion(header_region.x, header_region.y,
-                      header_region.w, header_region.h,
-                      header_region.data);
+    display_->DrawRegion(regions_.header.x, regions_.header.y,
+                      regions_.header.w, regions_.header.h,
+                      regions_.header.data);
     
-    display_->DrawRegion(content_region.x, content_region.y,
-                      content_region.w, content_region.h,
-                      content_region.data);
+    display_->DrawRegion(regions_.content.x, regions_.content.y,
+                      regions_.content.w, regions_.content.h,
+                      regions_.content.data);
     
-    display_->DrawRegion(footer_region_.x, footer_region_.y,
-                      footer_region_.w, footer_region_.h,
-                      footer_region_.data);
+    display_->DrawRegion(regions_.footer.x, regions_.footer.y,
+                      regions_.footer.w, regions_.footer.h,
+                      regions_.footer.data);
 
 }
 
 void PitchPage::OnExitPage() {
-    is_active_ = false;
+    state_.is_active = false;
     draw_context_.is_active = false;
 }
 
 void PitchPage::OnClick(uint8_t encoder) {
-  if(!is_active_) return;
-
-  needs_redraw_ = true;
+    if(!state_.is_active) return;
+    state_.needs_redraw = true;
 }
 
 void PitchPage::OnLongClick(uint8_t encoder) {
-  if(!is_active_) return;
-
-  needs_redraw_ = true;
+    if(!state_.is_active) return;
+    state_.needs_redraw = true;
 }
 
 void PitchPage::OnIdle() {
@@ -251,107 +230,14 @@ void PitchPage::RenderNote(const Note& note, uint32_t x_offset, uint32_t y_offse
         note_str[2] = static_cast<char>('0' + note.octave);
         note_str[3] = 0;
         // Диезные ноты рисуем без дополнительного смещения
-        region_string(&content_region, note_str, x_offset, y_offset, 0xf, 0x0, 0);
+        region_string(&regions_.content, note_str, x_offset, y_offset, 0xf, 0x0, 0);
     } else {
         note_str[0] = note.base;
         note_str[1] = static_cast<char>('0' + note.octave);
         note_str[2] = 0;
         // Не диезные ноты сдвигаем на 4 пикселя вправо для центрирования
-        region_string(&content_region, note_str, x_offset + 3, y_offset, 0xf, 0x0, 0);
+        region_string(&regions_.content, note_str, x_offset + 3, y_offset, 0xf, 0x0, 0);
     }
-}
-
-void PitchPage::DrawFooterSlider() {
-  static constexpr uint8_t SLIDER_WIDTH = 33;
-  static constexpr uint8_t SLIDER_HEIGHT = 2;
-  
-  // Вычисляем центральную позицию для слайдера
-  uint32_t x_start = (footer_region_.w - SLIDER_WIDTH) / 2;
-  uint32_t y_start = (footer_region_.h - SLIDER_HEIGHT) / 2;
-  
-  // Отрисовываем слайдер попиксельно
-  for(uint8_t y = 0; y < SLIDER_HEIGHT; y++) {
-    for(uint8_t x = 0; x < SLIDER_WIDTH; x++) {
-      if(x % 2 == 0) { // Каждый четный пиксель
-        uint32_t offset = (y_start + y) * footer_region_.w + x_start + x;
-        region_fill_part(&footer_region_, offset, 1, 0xFF);
-      }
-    }
-  }
-}
-
-void PitchPage::UpdateFooterValues() {
-    // Формируем только строки со значениями (без букв A/B)
-    char value_a[4];
-    char value_b[4];
-
-    if(footer_.value_a == 0) {
-        snprintf(value_a, sizeof(value_a), "0");
-    } else {
-        snprintf(value_a, sizeof(value_a), "%d%c", abs(footer_.value_a),
-                 footer_.value_a > 0 ? '+' : '-');
-    }
-
-    if(footer_.value_b == 0) {
-        snprintf(value_b, sizeof(value_b), "0");
-    } else {
-        snprintf(value_b, sizeof(value_b), "%d%c", abs(footer_.value_b),
-                 footer_.value_b > 0 ? '+' : '-');
-    }
-
-    // Очищаем весь футер
-    region_fill(&footer_region_, 0x00);
-
-    static constexpr uint8_t BLOCK_WIDTH = 38;
-    static constexpr uint8_t BLOCK_HEIGHT = 17;
-    static constexpr uint8_t MARGIN = 2;
-    static constexpr uint8_t TEXT_MARGIN = 2; // Отступ для текста
-    static constexpr uint8_t VALUE_Y_OFFSET = 0; // Смещение для значений сверху
-
-    // Рисуем белые блоки
-    for(uint32_t y = 0; y < BLOCK_HEIGHT; y++) {
-        // Левый блок
-        region_fill_part(&footer_region_, 
-                        y * footer_region_.w + MARGIN, 
-                        BLOCK_WIDTH, 
-                        0xFF);
-        // Правый блок
-        region_fill_part(&footer_region_, 
-                        y * footer_region_.w + (footer_region_.w - MARGIN - BLOCK_WIDTH), 
-                        BLOCK_WIDTH, 
-                        0xFF);
-    }
-
-    // Рисуем статичные буквы A и B большим шрифтом
-    region_string_big(&footer_region_, "A", MARGIN + 2, 2, 0xF, 0x0, 1);
-    region_string_big(&footer_region_, "B", 
-                     footer_region_.w - (FONT2_CHARW - 3), 
-                     2, 0xF, 0x0, 1);
-
-    // "TUNE" в левом блоке (прибит к правому нижнему углу)
-    region_string(&footer_region_, "TUNE",
-                 MARGIN + BLOCK_WIDTH - 17, // 20 - примерная ширина слова "TUNE"
-                 BLOCK_HEIGHT - FONT_CHARH - TEXT_MARGIN,
-                 0x0, 0xF, 0);
-
-    // "TUNE" в правом блоке (прибит к левому нижнему углу)
-    region_string(&footer_region_, "TUNE",
-                 footer_region_.w - MARGIN - BLOCK_WIDTH + TEXT_MARGIN,
-                 BLOCK_HEIGHT - FONT_CHARH - TEXT_MARGIN,
-                 0x0, 0xF, 0);
-
-    // Value A в левом блоке (прибит к правому верхнему углу)
-    uint32_t value_a_x = MARGIN + BLOCK_WIDTH - (strlen(value_a) * 4) - TEXT_MARGIN + 1; // Добавили +1 для смещения вправо
-    region_string(&footer_region_, value_a,
-                 value_a_x,
-                 VALUE_Y_OFFSET, // Используем новое смещение
-                 0x0, 0xF, 0);
-
-    // Value B в правом блоке (прибит к левому верхнему углу)
-    region_string(&footer_region_, value_b,
-                 footer_region_.w - MARGIN - BLOCK_WIDTH + TEXT_MARGIN,
-                 VALUE_Y_OFFSET, // Используем новое смещение
-                 0x0, 0xF, 0);
 }
 
 void PitchPage::UpdatePatchNote(const Note& note, plaits::Patch* patch) {
@@ -376,71 +262,56 @@ void PitchPage::UpdatePatchNote(const Note& note, plaits::Patch* patch) {
 
 void PitchPage::UpdateAllVoicePitches() {
     for(uint8_t i = 0; i < NUM_VOICES; i++) {
-        Note& note = i < 4 ? left_notes_[i] : right_notes_[i-4];
+        Note& note = i < 4 ? notes_.left[i] : notes_.right[i-4];
         UpdatePatchNote(note, patches_[i]);
     }
 }
 
 void PitchPage::InitRegions() {
     // Initialize header
-    header_region.w = DisplayLayout::SCREEN_WIDTH;
-    header_region.h = DisplayLayout::HEADER_HEIGHT;
-    header_region.x = 0;
-    header_region.y = 0;
-    region_alloc(&header_region);
+    regions_.header.w = DisplayLayout::SCREEN_WIDTH;
+    regions_.header.h = DisplayLayout::HEADER_HEIGHT;
+    regions_.header.x = 0;
+    regions_.header.y = 0;
+    region_alloc(&regions_.header);
 
     // Initialize content
-    content_region.w = DisplayLayout::SCREEN_WIDTH;
-    content_region.h = DisplayLayout::CONTENT_HEIGHT;
-    content_region.x = 0;
-    content_region.y = header_region.h;
-    region_alloc(&content_region);
+    regions_.content.w = DisplayLayout::SCREEN_WIDTH;
+    regions_.content.h = DisplayLayout::CONTENT_HEIGHT;
+    regions_.content.x = 0;
+    regions_.content.y = regions_.header.h;
+    region_alloc(&regions_.content);
 
     // Initialize footer
-    footer_region_.w = DisplayLayout::SCREEN_WIDTH;
-    footer_region_.h = DisplayLayout::SCREEN_HEIGHT - (header_region.h + content_region.h);
-    footer_region_.x = 0;
-    footer_region_.y = header_region.h + content_region.h;
-    region_alloc(&footer_region_);
+    regions_.footer.w = DisplayLayout::SCREEN_WIDTH;
+    regions_.footer.h = DisplayLayout::SCREEN_HEIGHT - (regions_.header.h + regions_.content.h);
+    regions_.footer.x = 0;
+    regions_.footer.y = regions_.header.h + regions_.content.h;
+    region_alloc(&regions_.footer);
 }
 
 void PitchPage::InitNotes() {
     // Initialize left notes
-    left_notes_[0] = {.base = 'C', .octave = 2, .sharp = false};
-    left_notes_[1] = {.base = 'G', .octave = 2, .sharp = false};
-    left_notes_[2] = {.base = 'A', .octave = 2, .sharp = false};
-    left_notes_[3] = {.base = 'C', .octave = 4, .sharp = false};
+    notes_.left[0] = {.base = 'C', .octave = 2, .sharp = false};
+    notes_.left[1] = {.base = 'G', .octave = 2, .sharp = false};
+    notes_.left[2] = {.base = 'A', .octave = 2, .sharp = false};
+    notes_.left[3] = {.base = 'C', .octave = 4, .sharp = false};
 
     // Initialize right notes
-    right_notes_[0] = {.base = 'C', .octave = 4, .sharp = false};
-    right_notes_[1] = {.base = 'G', .octave = 2, .sharp = false};
-    right_notes_[2] = {.base = 'A', .octave = 2, .sharp = false};
-    right_notes_[3] = {.base = 'C', .octave = 4, .sharp = false};
+    notes_.right[0] = {.base = 'C', .octave = 4, .sharp = false};
+    notes_.right[1] = {.base = 'G', .octave = 2, .sharp = false};
+    notes_.right[2] = {.base = 'A', .octave = 2, .sharp = false};
+    notes_.right[3] = {.base = 'C', .octave = 4, .sharp = false};
 }
 
 void PitchPage::UpdateNote(uint8_t encoder_index, int32_t increment) {
     Note& current_note = encoder_index < 4 ? 
-                        left_notes_[encoder_index] : 
-                        right_notes_[encoder_index - 4];
+                        notes_.left[encoder_index] : 
+                        notes_.right[encoder_index - 4];
     
     UpdateNoteByEncoder(encoder_index, increment);
-    content_region.dirty = 1;
+    regions_.content.dirty = 1;
     UpdatePatchNote(current_note, patches_[encoder_index]);
-}
-
-void PitchPage::Footer::Update() {
-    // Update footer display
-}
-
-void PitchPage::UpdateRegions() {
-    if(header_region.dirty) {
-        display_->DrawRegion(header_region.x, header_region.y,
-                           header_region.w, header_region.h,
-                           header_region.data);
-        header_region.dirty = 0;
-    }
-
-    // ...similarly update content and footer regions...
 }
 
 void PitchPage::DrawIcons() {
@@ -449,9 +320,9 @@ void PitchPage::DrawIcons() {
 }
 
 void PitchPage::UpdateNoteByEncoder(uint8_t encoder, int32_t increment) {
-    current_encoder_ = encoder;  // Сохраняем текущий энкодер
+    state_.current_encoder = encoder;  // Сохраняем текущий энкодер
     
-    Note& current_note = encoder < 4 ? left_notes_[encoder] : right_notes_[encoder - 4];
+    Note& current_note = encoder < 4 ? notes_.left[encoder] : notes_.right[encoder - 4];
     uint8_t current_index = GetIndexFromNote(current_note);
     
     int new_index = current_index + increment;
@@ -461,6 +332,43 @@ void PitchPage::UpdateNoteByEncoder(uint8_t encoder, int32_t increment) {
     
     GetNoteFromIndex(new_index, current_note);
     ShowNoteModal(current_note); // Show modal when note changes
+}
+
+void PitchPage::RenderContent() {
+    region_fill(&regions_.content, 0x0);
+    DrawNotes();     
+    DrawSliders();   
+    DrawIcons();     
+}
+
+void PitchPage::RenderHeader() {
+    region_fill(&regions_.header, 0x0);
+    region_string(&regions_.header, "PITCH", 2, 0, 0xf, 0x0, 0);
+    region_string(&regions_.header, "C MINOR", 34, 0, 0xf, 0x0, 0);
+}
+
+void PitchPage::RenderFooter() {
+    region_fill(&regions_.footer, 0x0);
+    footer_renderer_.DrawFooter(
+        regions_.footer,
+        footer_.labelA,
+        footer_.labelB,
+        footer_.blockLabelA,
+        footer_.blockLabelB,
+        footer_.value_a,
+        footer_.value_b
+    );
+}
+
+void PitchPage::UpdateRegion(const region& reg) {
+    display_->DrawRegion(reg.x, reg.y, reg.w, reg.h, reg.data);
+    const_cast<region&>(reg).dirty = 0;
+}
+
+void PitchPage::MarkAllRegionsDirty() {
+    regions_.header.dirty = 1;
+    regions_.content.dirty = 1;
+    regions_.footer.dirty = 1;
 }
 
 }  // namespace t8synth

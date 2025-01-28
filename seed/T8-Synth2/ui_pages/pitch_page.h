@@ -6,6 +6,7 @@
 #include "../common_ui/modal_window.h"
 #include "../common_ui/icons_renderer.h"
 #include "../common_ui/sliders_renderer.h"
+#include "../common_ui/footer_renderer.h" // Добавляем этот инклюд
 
 namespace t8synth {
 
@@ -59,31 +60,52 @@ public:
     void UpdateDisplay() override;
 
 private:
-    // State
-    bool is_active_{false};
-    bool needs_redraw_{false};
+    // Группируем связанные данные в структуры
+    struct PageState {
+        bool is_active{false};
+        bool needs_redraw{false};
+        uint8_t current_encoder{0};
+    } state_;
 
-    // Regions
-    region header_region;
-    region content_region;
-    region footer_region_;
+    // Группируем все регионы
+    struct Regions {
+        region header;
+        region content;
+        region footer;
+    } regions_;
 
-    // Modal state
+    // Группируем данные нот
+    struct NotesData {
+        static constexpr uint8_t NOTES_PER_GROUP = 4;
+        Note left[NOTES_PER_GROUP];
+        Note right[NOTES_PER_GROUP];
+    } notes_;
+
+    // Рендереры
     ModalWindow modal_window_;
+    FooterRenderer footer_renderer_;
+    IconsRenderer icons_renderer_;
+    SlidersRenderer sliders_renderer_;
+
+    // Методы для работы с регионами
+    void InitRegions();
+    void UpdateRegion(const region& reg);
+    void MarkAllRegionsDirty(); // Add this declaration
+    
+    // Оптимизированные методы рисования
+    void RenderContent();
+    void RenderHeader();
+    void RenderFooter();
 
     // Notes management
     static constexpr uint8_t MIN_OCTAVE = 2;
     static constexpr uint8_t MAX_OCTAVE = 4;
     static constexpr uint8_t NOTES_PER_OCTAVE = 12;
     static const char* const available_notes_[];
-    Note left_notes_[4];
-    Note right_notes_[4];
 
     // Drawing methods
     void DrawNotes();
     void RenderNote(const Note& note, uint32_t x_offset, uint32_t y_offset);
-    void DrawFooterSlider();
-    void UpdateFooterValues();
     void DrawIcons();
     void DrawSliders();  // Add this declaration back
 
@@ -102,25 +124,23 @@ private:
         bool is_active{false};
     } draw_context_;
 
-    // Region management
-    void InitRegions();
-    void UpdateRegions();
-
     // Note management
     void InitNotes();
     void UpdateNote(uint8_t encoder_index, int32_t increment);
 
-    // Footer management 
+    // Удаляем неиспользуемые методы и структуру
+    // void DrawFooterSlider();
+    // void UpdateFooterValues();
+
+    // Внутренние данные футера, включая кастомные названия
     struct Footer {
         int8_t value_a{0};
         int8_t value_b{0};
-        void Update();
-        void Draw(region& reg);
+        const char* labelA{"A"};
+        const char* labelB{"B"};
+        const char* blockLabelA{"TUNE"};
+        const char* blockLabelB{"TUNE"};
     } footer_;
-
-    uint8_t current_encoder_{0};  // Добавьте это поле
-    IconsRenderer icons_renderer_;
-    SlidersRenderer sliders_renderer_;
 };
 
 } // namespace t8synth
