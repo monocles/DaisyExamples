@@ -8,8 +8,8 @@
 #include "drivers/pot_controller.h"
 #include "dsp/voice.h"
 #include "ui_pages/ui_page.h"
-#include "voice_manager.h"  // Add this include
 #include "daisysp.h"
+#include "voice_manager.h"
 
 extern daisy::DaisySeed hw;
 
@@ -18,6 +18,7 @@ using namespace stmlib;
 enum UiPageNumber {
   PAGE_PERFORMANCE,
   PAGE_PITCH,  // Добавляем новую страницу
+  PAGE_VOLUME,  // Добавляем новую страницу
   PAGE_LAST
 };
 

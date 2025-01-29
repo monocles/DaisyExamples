@@ -1,10 +1,14 @@
 #pragma once
 
 #include "ui_page.h"
-#include "pitch_page.h"
-
 #include "../drivers/region.h"
 #include "../drivers/encoder_controller.h" // Добавляем этот инклюд
+// #include "../common_ui/modal_window.h"
+#include "../common_ui/icons_renderer.h"
+#include "../common_ui/sliders_renderer.h"
+#include "../common_ui/footer_renderer.h" // Добавляем этот инклюд
+// #include "../common_ui/notes_renderer.h"
+#include "voice_manager.h"  // Add this include
 
 namespace t8synth {
 
@@ -16,18 +20,7 @@ namespace t8synth {
 //     static constexpr uint8_t TOTAL_NOTES = (MAX_OCTAVE - MIN_OCTAVE + 1) * NOTES_PER_OCTAVE;
 // };
 
-// struct DisplayLayout {
-//     static constexpr uint8_t SCREEN_WIDTH = 128;
-//     static constexpr uint8_t SCREEN_HEIGHT = 64;
-//     static constexpr uint8_t HEADER_HEIGHT = 9;
-//     static constexpr uint8_t CONTENT_HEIGHT = 36;
-// };
-
-// struct ModalConfig {
-//     static constexpr uint8_t WIDTH = 64;
-//     static constexpr uint8_t HEIGHT = 40;
-//     static constexpr uint32_t HIDE_DELAY_MS = 2000;
-// };
+// Удаляем дублирующуюся структуру DisplayLayout, так как она определена в ui_page.h
 
 // struct Note {
 //     char base;      // Базовая нота (C, D, E, F, G, A, B)
@@ -62,78 +55,96 @@ public:
     void UpdateDisplay() override;
 
 private:
-    // State
-    bool is_active_{false};
-    bool needs_redraw_{false};
+    // Группируем связанные данные в структуры
+    struct PageState {
+        bool is_active{false};
+        bool needs_redraw{false};
+        uint8_t current_encoder{0};
+    } state_;
 
-    // Regions
-    region header_region;
-    region content_region;
-    region footer_region_;
-    region modal_region;
+    // Группируем все регионы
+    struct Regions {
+        region header;
+        region content;
+        region footer;
+    } regions_;
 
-    // Modal state
-    static constexpr uint8_t MODAL_WIDTH = 64;
-    static constexpr uint8_t MODAL_HEIGHT = 40;
-    static constexpr uint32_t MODAL_HIDE_DELAY_MS = 2000;
+    // Группируем данные нот
+    // struct NotesData {
+    //     static constexpr uint8_t NOTES_PER_GROUP = 4;
+    //     // Храним ноты как MIDI числа вместо структуры Note
+    //     uint8_t left[NOTES_PER_GROUP];
+    //     uint8_t right[NOTES_PER_GROUP];
+    // } notes_;
+
+    // Рендереры
+    // ModalWindow modal_window_;
+    FooterRenderer footer_renderer_;
+    IconsRenderer icons_renderer_;
+    SlidersRenderer sliders_renderer_;
+    // NotesRenderer notes_renderer_;  // Добавляем рендерер нот
+
+    // Методы для работы с регионами
+    void InitRegions();
+    void UpdateRegion(const region& reg);
+    void MarkAllRegionsDirty(); // Add this declaration
     
-    bool modal_visible_{false};
-    uint32_t last_note_change_time_{0};
-    Note current_modal_note_{};
+    // Оптимизированные методы рисования
+    void RenderContent();
+    void RenderHeader();
+    void RenderFooter();
 
-    // Notes management
-    static constexpr uint8_t MIN_OCTAVE = 2;
-    static constexpr uint8_t MAX_OCTAVE = 4;
-    static constexpr uint8_t NOTES_PER_OCTAVE = 12;
-    static const char* const available_notes_[];
-    Note left_notes_[4];
-    Note right_notes_[4];
+    // // Notes management
+    // static constexpr uint8_t MIN_OCTAVE = 2;
+    // static constexpr uint8_t MAX_OCTAVE = 4;
+    // static constexpr uint8_t NOTES_PER_OCTAVE = 12;
+    // static const char* const available_notes_[];
 
     // Drawing methods
-    void DrawSliders();
-    void DrawSlider(uint32_t x_offset, uint32_t start_y);
-    void DrawNotes();
-    void RenderNote(const Note& note, uint32_t x_offset, uint32_t y_offset);
-    void DrawFooterSlider();
-    void UpdateFooterValues();
-    void DrawIcons();  // Add new method declaration
+    void DrawIcons();
+    void DrawSliders();  // Add this declaration back
 
     // Modal methods
-    void ShowNoteModal(const Note& note);
-    void UpdateModal();
-    void DrawModal();
-    void DrawModalFrame();
-    void DrawModalContent();
+    // void ShowNoteModal(const Note& note);
 
     // Note handling
-    void UpdateNoteByEncoder(uint8_t encoder, int32_t increment);
-    void GetNoteFromIndex(uint8_t index, Note& note);
-    uint8_t GetIndexFromNote(const Note& note);
-    void UpdatePatchNote(const Note& note, plaits::Patch* patch);
-    void UpdateAllVoicePitches();
+    // void UpdateNoteByEncoder(uint8_t encoder, int32_t increment);
+    // void GetNoteFromIndex(uint8_t index, Note& note);
+    // uint8_t GetIndexFromNote(const Note& note);
+    // void UpdatePatchNote(const Note& note, plaits::Patch* patch);
+    // void UpdateAllVoicePitches();
 
     // Drawing context
     struct DrawContext {
         bool is_active{false};
     } draw_context_;
 
-    // Region management
-    void InitRegions();
-    void UpdateRegions();
-
     // Note management
-    void InitNotes();
-    void UpdateNote(uint8_t encoder_index, int32_t increment);
+    // void InitNotes();
+    // void UpdateNote(uint8_t encoder_index, int32_t increment);
 
-    // Footer management 
+    // Удаляем неиспользуемые методы и структуру
+    // void DrawFooterSlider();
+    // void UpdateFooterValues();
+
+    // Внутренние данные футера, включая кастомные названия
     struct Footer {
         int8_t value_a{0};
         int8_t value_b{0};
-        void Update();
-        void Draw(region& reg);
+        const char* labelA{"A"};
+        const char* labelB{"B"};
+        const char* blockLabelA{"TUNE"};
+        const char* blockLabelB{"TUNE"};
     } footer_;
 
-    uint8_t current_encoder_{0};  // Добавьте это поле
+    // Константы для MIDI нот
+    // static constexpr uint8_t kMiddleC = 60;  // C4
+    // static constexpr uint8_t kC2 = 36;       // C2
+    // static constexpr uint8_t kC7 = 96;       // C7
+
+    // Утилиты для работы с MIDI нотами
+    // static Note MidiNoteToNote(uint8_t midi_note);
+    // static uint8_t NoteToMidiNote(const Note& note);
 };
 
 } // namespace t8synth

@@ -21,7 +21,7 @@ public:
         float smooth_volume{1.0f}; // сглаженное значение громкости
     };
     
-    static constexpr float VOLUME_SMOOTHING = 0.02f; // коэффициент сглаживания громкости
+    static constexpr float VOLUME_SMOOTHING = 0.01f; // коэффициент сглаживания громкости
 
     void Init() {
         for(size_t i = 0; i < NUM_VOICES; i++) {

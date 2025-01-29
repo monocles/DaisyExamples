@@ -15,6 +15,7 @@ drivers/font.cpp \
 ui_pages/performance_page.cpp \
 ui_pages/pitch_page.cpp \
 ui_pages/ui_page.cpp \
+ui_pages/volume_page.cpp \
 common_ui/modal_window.cpp \
 common_ui/footer_renderer.cpp \
 voice_manager.cpp \

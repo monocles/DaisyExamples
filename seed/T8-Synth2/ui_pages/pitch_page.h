@@ -7,6 +7,7 @@
 #include "../common_ui/icons_renderer.h"
 #include "../common_ui/sliders_renderer.h"
 #include "../common_ui/footer_renderer.h" // Добавляем этот инклюд
+#include "../common_ui/notes_renderer.h"
 
 namespace t8synth {
 
@@ -18,14 +19,7 @@ struct NoteRange {
     static constexpr uint8_t TOTAL_NOTES = (MAX_OCTAVE - MIN_OCTAVE + 1) * NOTES_PER_OCTAVE;
 };
 
-struct DisplayLayout {
-    static constexpr uint8_t SCREEN_WIDTH = 128;
-    static constexpr uint8_t SCREEN_HEIGHT = 64;
-    static constexpr uint8_t HEADER_HEIGHT = 9;
-    static constexpr uint8_t CONTENT_HEIGHT = 36;
-};
-
-// Удаляем дублирующуюся структуру ModalConfig, так как она определена в modal_window.h
+// Удаляем дублирующуюся структуру DisplayLayout, так как она определена в ui_page.h
 
 struct Note {
     char base;      // Базовая нота (C, D, E, F, G, A, B)
@@ -77,8 +71,9 @@ private:
     // Группируем данные нот
     struct NotesData {
         static constexpr uint8_t NOTES_PER_GROUP = 4;
-        Note left[NOTES_PER_GROUP];
-        Note right[NOTES_PER_GROUP];
+        // Храним ноты как MIDI числа вместо структуры Note
+        uint8_t left[NOTES_PER_GROUP];
+        uint8_t right[NOTES_PER_GROUP];
     } notes_;
 
     // Рендереры
@@ -86,6 +81,7 @@ private:
     FooterRenderer footer_renderer_;
     IconsRenderer icons_renderer_;
     SlidersRenderer sliders_renderer_;
+    NotesRenderer notes_renderer_;  // Добавляем рендерер нот
 
     // Методы для работы с регионами
     void InitRegions();
@@ -104,8 +100,6 @@ private:
     static const char* const available_notes_[];
 
     // Drawing methods
-    void DrawNotes();
-    void RenderNote(const Note& note, uint32_t x_offset, uint32_t y_offset);
     void DrawIcons();
     void DrawSliders();  // Add this declaration back
 
@@ -114,8 +108,8 @@ private:
 
     // Note handling
     void UpdateNoteByEncoder(uint8_t encoder, int32_t increment);
-    void GetNoteFromIndex(uint8_t index, Note& note);
-    uint8_t GetIndexFromNote(const Note& note);
+    // void GetNoteFromIndex(uint8_t index, Note& note);
+    // uint8_t GetIndexFromNote(const Note& note);
     void UpdatePatchNote(const Note& note, plaits::Patch* patch);
     void UpdateAllVoicePitches();
 
@@ -141,6 +135,15 @@ private:
         const char* blockLabelA{"TUNE"};
         const char* blockLabelB{"TUNE"};
     } footer_;
+
+    // Константы для MIDI нот
+    static constexpr uint8_t kMiddleC = 60;  // C4
+    static constexpr uint8_t kC2 = 36;       // C2
+    static constexpr uint8_t kC7 = 96;       // C7
+
+    // Утилиты для работы с MIDI нотами
+    static Note MidiNoteToNote(uint8_t midi_note);
+    static uint8_t NoteToMidiNote(const Note& note);
 };
 
 } // namespace t8synth

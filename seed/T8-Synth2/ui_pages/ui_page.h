@@ -6,6 +6,14 @@
 
 namespace t8synth {
 
+// Перемещаем DisplayLayout в общий файл
+struct DisplayLayout {
+    static constexpr uint8_t SCREEN_WIDTH = 128;
+    static constexpr uint8_t SCREEN_HEIGHT = 64;
+    static constexpr uint8_t HEADER_HEIGHT = 9;
+    static constexpr uint8_t CONTENT_HEIGHT = 36;
+};
+
 enum EditMode {
   EDIT_IDLE,
   EDIT_STARTED_BY_ENCODER,
