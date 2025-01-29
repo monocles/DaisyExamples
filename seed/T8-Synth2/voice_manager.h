@@ -17,11 +17,11 @@ public:
         plaits::Voice voice;
         plaits::Patch patch;
         char* buffer;
-        float volume{1.0f};        // целевое значение громкости
-        float smooth_volume{1.0f}; // сглаженное значение громкости
+        float volume{0.0f};         // основное значение громкости
+        float smooth_volume{0.0f};  // сглаженное значение громкости
     };
     
-    static constexpr float VOLUME_SMOOTHING = 0.01f; // коэффициент сглаживания громкости
+    static constexpr float VOLUME_SMOOTHING = 0.005f; // коэффициент сглаживания громкости
 
     void Init() {
         for(size_t i = 0; i < NUM_VOICES; i++) {
@@ -29,7 +29,8 @@ public:
             stmlib::BufferAllocator allocator(voices_[i].buffer, BUFFER_SIZE);
             voices_[i].voice.Init(&allocator);
             voices_[i].patch.engine = 0;
-            voices_[i].volume = 0.0f; // Устанавливаем начальную громкость в 0
+            voices_[i].volume = 0.0f;   // Инициализируем volume
+            voices_[i].smooth_volume = 0.0f;    // Инициализируем smooth_volume
         }
     }
 
@@ -67,15 +68,15 @@ public:
         float total_volume = 0.0f;
         
         for(const auto& voice : voices_) {
-            if(voice.volume > 0.001f) {  // Порог для определения активного голоса
+            if(voice.volume > 0.001f) {  // Используем volume
                 active_voices += 1.0f;
-                total_volume += voice.volume;
+                total_volume += voice.volume;  // Используем volume
             }
         }
         
         // Вычисляем целевое значение unity gain
         if(active_voices > 0.0f) {
-            target_unity_gain_ = 1.0f / sqrtf(active_voices);
+            target_unity_gain_ = 1.0f / stmlib::Sqrt(active_voices);
         } else {
             target_unity_gain_ = 1.0f;
         }

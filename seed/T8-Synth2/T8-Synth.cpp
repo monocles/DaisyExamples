@@ -75,9 +75,8 @@ void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, s
             // Используем сглаженное значение громкости
             float voice_gain = voice_unit.smooth_volume * unity_gain;
             
-            // Применяем мягкое ограничение
-            mix_main += daisysp::SoftClip(normalized_out * voice_gain);
-            mix_aux += daisysp::SoftClip(normalized_aux * voice_gain);
+            mix_main += normalized_out * voice_gain;
+            mix_aux += normalized_aux * voice_gain;
         }
         
         OUT_L[i] = daisysp::SoftClip(mix_main);

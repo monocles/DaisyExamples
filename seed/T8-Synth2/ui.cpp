@@ -23,7 +23,7 @@ void Ui::Init(EncoderController* encoders, DisplayController* display,
     }
 
     system_clock.Init();
-    encoders_->set_sensitivity(2);
+    encoders_->set_sensitivity(1);
     queue_.Init();
 
     // Initialize input states
@@ -117,23 +117,23 @@ void Ui::HandlePageEvent(const Event& e) {
     switch(e.control_type) {
         case CONTROL_ENCODER:
             if(volume_mode_ && e.control_id < 8) {
-                auto& voice = voice_manager_->GetVoice(e.control_id);
-                
-                // Используем нелинейное отображение для более музыкального изменения громкости
                 float normalized_volume = encoder_volumes_[e.control_id];
                 
+                // Больший шаг для быстрого изменения
+                float step = 0.02f;
+                
                 if(e.data < 0) {
-                    normalized_volume = daisysp::fmax(0.0f, normalized_volume - 0.02f);
+                    normalized_volume = daisysp::fmax(0.0f, normalized_volume - step);
                 } else {
-                    normalized_volume = daisysp::fmin(1.0f, normalized_volume + 0.02f);
+                    normalized_volume = daisysp::fmin(1.0f, normalized_volume + step);
                 }
                 
                 encoder_volumes_[e.control_id] = normalized_volume;
                 
-                // Применяем экспоненциальную кривую для более естественного изменения громкости
-                voice.volume = daisysp::fmap(normalized_volume, 0.0f, 1.0f, daisysp::Mapping::EXP);
+                // Устанавливаем громкость с экспоненциальным маппингом
+                voice_manager_->SetVoiceVolume(e.control_id, 
+                    daisysp::fmap(normalized_volume, 0.0f, 1.0f, daisysp::Mapping::EXP));
                 
-                // Выводим значение в процентах
                 int volume_percent = static_cast<int>(normalized_volume * 100.0f);
                 hw.PrintLine("Voice %d volume: %d%%", e.control_id, volume_percent);
             } else {
@@ -166,7 +166,7 @@ void Ui::HandlePageEvent(const Event& e) {
                 if(volume_mode_) {
                     // При входе в режим громкости синхронизируем значения с текущими громкостями голосов
                     for(size_t i = 0; i < 8; i++) {
-                        encoder_volumes_[i] = voice_manager_->GetVoice(i).volume;
+                        encoder_volumes_[i] = voice_manager_->GetVoice(i).volume;  // Используем volume
                         hw.PrintLine("Voice %d volume: %d%%", i, (int)(encoder_volumes_[i] * 100.0f));
                     }
                 } else {
