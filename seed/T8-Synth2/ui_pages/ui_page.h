@@ -49,18 +49,23 @@ class UiPage {
   }
   virtual void UpdateDisplay() = 0;
 
-  void SetContext(plaits::Patch** patches,
+  virtual void SetContext(plaits::Patch** patches,
                  plaits::Voice** voices,
                  plaits::Modulations* mods,
                  DisplayController* display,
-                 PotController* pots) {  // Add pots parameter
+                 PotController* pots,
+                 void* context_data = nullptr) {  // Add context_data parameter
     patches_ = patches;
     voices_ = voices;
     modulations_ = mods;
     display_ = display;
     pots_ = pots;  // Store pots controller
+    context_data_ = context_data;
     NUM_VOICES = 8;
   }
+
+  // Обновляем виртуальный метод для поддержки двух слайдеров
+  virtual void OnSliderChanged(uint8_t position, uint8_t slider_id = 0) {}
 
  protected:
   EditMode edit_mode_{EDIT_IDLE};
@@ -71,6 +76,7 @@ class UiPage {
   plaits::Modulations* modulations_{nullptr};
   DisplayController* display_{nullptr};
   PotController* pots_{nullptr};  // Add pots member
+  void* context_data_{nullptr};  // Add this member
   size_t NUM_VOICES{4};  // Делаем переменной
 };
 

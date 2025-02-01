@@ -9,6 +9,7 @@
 #include "../common_ui/footer_renderer.h" // Добавляем этот инклюд
 // #include "../common_ui/notes_renderer.h"
 #include "voice_manager.h"  // Add this include
+#include "../globals.h"  // Добавляем include globals.h
 
 namespace t8synth {
 
@@ -53,6 +54,13 @@ public:
     void OnSwitch(uint8_t sw, bool pressed) override;
     void OnIdle() override;
     void UpdateDisplay() override;
+    void OnSliderChanged(uint8_t position, uint8_t slider_id = 0) override {
+        float normalized_volume = static_cast<float>(position) / 100.0f;
+        
+        // Каждый слайдер управляет своим голосом
+        UpdateVoiceVolumeFromSlider(slider_id, normalized_volume);
+        regions_.content.dirty = 1;
+    }
 
 private:
     // Группируем связанные данные в структуры
@@ -97,7 +105,7 @@ private:
     // // Notes management
     // static constexpr uint8_t MIN_OCTAVE = 2;
     // static constexpr uint8_t MAX_OCTAVE = 4;
-    // static constexpr uint8_t NOTES_PER_OCTAVE = 12;
+    static constexpr uint8_t NOTES_PER_OCTAVE = 12;
     // static const char* const available_notes_[];
 
     // Drawing methods
@@ -145,6 +153,50 @@ private:
     // Утилиты для работы с MIDI нотами
     // static Note MidiNoteToNote(uint8_t midi_note);
     // static uint8_t NoteToMidiNote(const Note& note);
+
+    static constexpr float VOLUME_STEP = 0.02f;  // Шаг изменения громкости
+    float encoder_volumes_[VoiceManager::NUM_VOICES]{0.0f};
+
+    void UpdateVoiceVolume(uint8_t voice_index, int32_t increment);
+    
+    // Оставляем только одно определение SyncVolumes
+    void SyncVolumes() {
+        // Синхронизируем значения с текущими громкостями голосов
+        for(size_t i = 0; i < VoiceManager::NUM_VOICES; i++) {
+            encoder_volumes_[i] = voice_manager.GetVoice(i).volume;
+            // Обновляем визуальное отображение всех слайдеров
+            sliders_renderer_.SetSliderValue(i, encoder_volumes_[i] * 100);
+            daisy::DaisySeed::PrintLine("Voice %d volume: %d%%", i, 
+                static_cast<int>(encoder_volumes_[i] * 100.0f));
+        }
+        // Принудительно перерисовываем после обновления всех значений
+        regions_.content.dirty = 1;
+        RenderContent();
+        display_->DrawRegion(regions_.content.x, regions_.content.y,
+                           regions_.content.w, regions_.content.h,
+                           regions_.content.data);
+    }
+
+    // Добавляем метод для обновления громкости от слайдера
+    void UpdateVoiceVolumeFromSlider(uint8_t voice_index, float normalized_volume) {
+        encoder_volumes_[voice_index] = normalized_volume;
+        voice_manager.SetVoiceVolume(voice_index, 
+            daisysp::fmap(normalized_volume, 0.0f, 1.0f, daisysp::Mapping::EXP));
+        
+        // Обновляем визуальное отображение слайдера
+        sliders_renderer_.SetSliderValue(voice_index, normalized_volume * 100);
+        
+        // Помечаем область контента как требующую перерисовки
+        regions_.content.dirty = 1;
+        // Принудительно перерисовываем контент
+        RenderContent();
+        display_->DrawRegion(regions_.content.x, regions_.content.y,
+                           regions_.content.w, regions_.content.h,
+                           regions_.content.data);
+        
+        int volume_percent = static_cast<int>(normalized_volume * 100.0f);
+        daisy::DaisySeed::PrintLine("Voice %d volume: %d%%", voice_index, volume_percent);
+    }
 };
 
 } // namespace t8synth

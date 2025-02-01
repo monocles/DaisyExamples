@@ -6,6 +6,7 @@
 #include "drivers/encoder_controller.h"
 #include "drivers/display_controller.h"
 #include "drivers/pot_controller.h"
+#include "drivers/i2c_controller.h"  // Добавляем инклюд I2C контроллера
 #include "dsp/voice.h"
 #include "ui_pages/ui_page.h"
 #include "daisysp.h"
@@ -29,7 +30,8 @@ class Ui {
   void Init(EncoderController* encoders, 
             DisplayController* display, 
             VoiceManager* voices,
-            plaits::Modulations* modulations);
+            plaits::Modulations* modulations,
+            I2CController* sliders);
   void Poll();
   void DoEvents();
   void FlushEvents();
@@ -42,6 +44,7 @@ class Ui {
   EncoderController* encoders_;
   DisplayController* display_;
   PotController* pots_;
+  I2CController* sliders_;
   
   EventQueue<16> queue_;
   uint8_t sub_clock_;
@@ -70,7 +73,7 @@ class Ui {
   bool volume_mode_{false}; // Add volume mode flag
   float encoder_volumes_[VoiceManager::NUM_VOICES]{0.0f}; // Используем NUM_VOICES из VoiceManager
 
-  // // Добавляем переменные для контроля частоты обновления дисплея
-  // uint32_t last_display_update_{0};
-  // static constexpr uint32_t DISPLAY_UPDATE_INTERVAL = 16; // ~60Hz
+  // Добавляем контроль частоты обновления дисплея
+  static constexpr uint32_t kDisplayUpdateInterval = 16; // ~60Hz (1000ms/60 ≈ 16.67ms)
+  uint32_t last_display_update_{0};
 };

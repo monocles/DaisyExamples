@@ -34,8 +34,8 @@
 namespace plaits {
   
 // Делаем глобальными константами в пространстве имен
-static constexpr size_t kBlockSize = 40;
-static constexpr size_t kMaxBlockSize = 40;
+static constexpr size_t kBlockSize = 32;
+static constexpr size_t kMaxBlockSize = 32;
 static const float kSampleRate = 48000.0f;
 
 // There is no proper PLL for I2S, only a divider on the system clock to derive

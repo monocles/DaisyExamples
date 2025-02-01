@@ -7,7 +7,9 @@
 #include "drivers/spi_manager.h"
 #include "drivers/display_controller.h"
 #include "drivers/pot_controller.h"
+#include "drivers/i2c_controller.h" // Добавляем инклюд I2C контроллера
 #include "voice_manager.h"
+#include "per/i2c.h" // Добавляем инклюд для I2C
 
 using namespace daisy;
 using namespace daisysp;
@@ -20,6 +22,7 @@ SpiManager spi_manager;
 EncoderController encoders;
 PotController pots;
 DisplayController display;
+I2CController sliders; // Создаем экземпляр I2C контроллера
 Ui ui;
 
 static daisy::TimerHandle tim;
@@ -112,9 +115,9 @@ int main(void)
     
     // Initialize pots with hardware reference only
     pots.Init(hw);
-    
+    sliders.Init(hw); // Инициализируем I2C контроллер
 	voice_manager.Init();
-	ui.Init(&encoders, &display, &voice_manager, &modulations);
+	ui.Init(&encoders, &display, &voice_manager, &modulations, &sliders); // Передаем I2C контроллер в UI
 
 	hw.StartAudio(AudioCallback);
     hw.PrintLine("Log started");

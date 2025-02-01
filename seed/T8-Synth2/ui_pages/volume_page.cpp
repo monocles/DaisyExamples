@@ -78,8 +78,8 @@ void VolumePage::OnEncoder(uint8_t encoder, int32_t increment) {
     if(!draw_context_.is_active) return;
 
     if(encoder < 8) {
-        // Voice encoders
-        // UpdateNote(encoder, increment);
+        UpdateVoiceVolume(encoder, increment);
+        regions_.content.dirty = 1;
     }
     else {
         // Mod encoders
@@ -151,6 +151,7 @@ void VolumePage::OnEnterPage() {
                       regions_.footer.w, regions_.footer.h,
                       regions_.footer.data);
 
+    SyncVolumes();  // Синхронизируем значения при входе
 }
 
 void VolumePage::OnExitPage() {
@@ -331,7 +332,7 @@ void VolumePage::RenderFooter() {
 }
 
 void VolumePage::UpdateRegion(const region& reg) {
-    display_->DrawRegion(reg.x, reg.y, reg.w, reg.h, reg.data);
+    // display_->DrawRegion(reg.x, reg.y, reg.w, reg.h, reg.data);
     const_cast<region&>(reg).dirty = 0;
 }
 
@@ -340,6 +341,47 @@ void VolumePage::MarkAllRegionsDirty() {
     regions_.content.dirty = 1;
     regions_.footer.dirty = 1;
 }
+
+void VolumePage::UpdateVoiceVolume(uint8_t voice_index, int32_t increment) {
+    float normalized_volume = encoder_volumes_[voice_index];
+    
+    // Изменяем громкость с учетом инкремента
+    if(increment < 0) {
+        normalized_volume = daisysp::fmax(0.0f, normalized_volume - VOLUME_STEP);
+    } else {
+        normalized_volume = daisysp::fmin(1.0f, normalized_volume + VOLUME_STEP);
+    }
+    
+    encoder_volumes_[voice_index] = normalized_volume;
+    
+    // Устанавливаем громкость с экспоненциальным маппингом
+    voice_manager.SetVoiceVolume(voice_index, 
+        daisysp::fmap(normalized_volume, 0.0f, 1.0f, daisysp::Mapping::EXP));
+    
+    // Отображаем значение в процентах
+    int volume_percent = static_cast<int>(normalized_volume * 100.0f);
+    daisy::DaisySeed::PrintLine("Voice %d volume: %d%%", voice_index, volume_percent);
+}
+
+// void VolumePage::SyncVolumes() {
+//     // Синхронизируем значения с текущими громкостями голосов
+//     for(size_t i = 0; i < VoiceManager::NUM_VOICES; i++) {
+//         encoder_volumes_[i] = voice_manager.GetVoice(i).volume;
+//         daisy::DaisySeed::PrintLine("Voice %d volume: %d%%", i, 
+//             static_cast<int>(encoder_volumes_[i] * 100.0f));
+//     }
+// }
+
+// Удаляем SetContext или оставляем базовую версию без voice_manager
+// void VolumePage::SetContext(plaits::Patch** patches, 
+//                           plaits::Voice** voices,
+//                           plaits::Modulations* modulations,
+//                           DisplayController* display,
+//                           PotController* pots,
+//                           void* context_data) {
+//     // Since we're using global voice_manager now, we don't need anything special here
+//     UiPage::SetContext(patches, voices, modulations, display, pots, context_data);
+// }
 
 }  // namespace t8synth
 

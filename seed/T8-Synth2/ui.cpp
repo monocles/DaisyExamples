@@ -2,18 +2,22 @@
 #include "stmlib/system/system_clock.h"
 #include "ui_pages/performance_page.h"
 #include "ui_pages/pitch_page.h"
+#include "ui_pages/volume_page.h"
+// #include "drivers/i2c_controller.h" 
 
 const int32_t kLongPressDuration = 1000;
 using namespace daisysp;
 
 void Ui::Init(EncoderController* encoders, DisplayController* display, 
             VoiceManager* voices,
-              plaits::Modulations* modulations) {
+              plaits::Modulations* modulations,
+              I2CController* sliders) {
     encoders_ = encoders;
     display_ = display;
     // pots_ = pots;
     voice_manager_ = voices;
     modulations_ = modulations;
+    sliders_ = sliders; // Добавляем сохранение указателя на I2CController
 
     // Инициализируем массивы указателей на все голоса
     for(size_t i = 0; i < VoiceManager::NUM_VOICES; i++) {
@@ -45,7 +49,28 @@ void Ui::Poll() {
     system_clock.Tick();
     uint32_t now = system_clock.milliseconds();
     ++sub_clock_;
+
+    // Вызываем сканирование I2C здесь, так как Poll вызывается с частотой 1kHz
+    if(sliders_) {
+        static uint8_t last_positions[3] = {0, 0, 0};
+        static bool was_touched[3] = {false, false, false};
         
+        auto data = sliders_->Process();
+        
+        // Добавляем отладочный вывод для всех слайдеров
+        if(data.touch_status) {
+            hw.PrintLine("Slider[%d] value=%d%%", data.slider_id, data.position);
+        }
+
+        // Отправляем событие только при изменении
+        if(data.touch_status && 
+           (!was_touched[data.slider_id] || data.position != last_positions[data.slider_id])) {
+            queue_.AddEvent(CONTROL_SLIDER_CHANGED, data.slider_id, data.position);
+            last_positions[data.slider_id] = data.position;
+        }
+        was_touched[data.slider_id] = data.touch_status;
+    }
+    
     // Обрабатываем энкодеры и кнопки только если есть новые данные
     if(encoders_->HasNewData()) {
         encoders_->ProcessEncoders(); 
@@ -88,7 +113,6 @@ void Ui::Poll() {
         }
     }
 
-    // Удаляем обновление дисплея из Poll()
 }
 
 void Ui::ShowPage(UiPageNumber page) {
@@ -116,29 +140,7 @@ void Ui::HandlePageEvent(const Event& e) {
     
     switch(e.control_type) {
         case CONTROL_ENCODER:
-            if(volume_mode_ && e.control_id < 8) {
-                float normalized_volume = encoder_volumes_[e.control_id];
-                
-                // Больший шаг для быстрого изменения
-                float step = 0.02f;
-                
-                if(e.data < 0) {
-                    normalized_volume = daisysp::fmax(0.0f, normalized_volume - step);
-                } else {
-                    normalized_volume = daisysp::fmin(1.0f, normalized_volume + step);
-                }
-                
-                encoder_volumes_[e.control_id] = normalized_volume;
-                
-                // Устанавливаем громкость с экспоненциальным маппингом
-                voice_manager_->SetVoiceVolume(e.control_id, 
-                    daisysp::fmap(normalized_volume, 0.0f, 1.0f, daisysp::Mapping::EXP));
-                
-                int volume_percent = static_cast<int>(normalized_volume * 100.0f);
-                hw.PrintLine("Voice %d volume: %d%%", e.control_id, volume_percent);
-            } else {
-                current_page_->OnEncoder(e.control_id, e.data);
-            }
+            current_page_->OnEncoder(e.control_id, e.data);
             break;
             
         case CONTROL_ENCODER_CLICK:
@@ -155,29 +157,40 @@ void Ui::HandlePageEvent(const Event& e) {
             hw.PrintLine("Switch %d: %d", e.control_id, e.data);
             using BTN = EncoderController::ButtonIndex;
             if(e.control_id == BTN::VOICE_BUTTON) {
-                volume_mode_ = false; // Reset volume mode when switching pages
-                hw.PrintLine("Switch to voice page");
-                ShowPage(PAGE_PERFORMANCE);
+                // volume_mode_ = false; // Reset volume mode when switching pages
+                // hw.PrintLine("Switch to voice page");
+                encoders_->set_sensitivity(1);
+                ShowPage(PAGE_VOLUME);
                 return;
             }
-            if(e.control_id == BTN::PITCH_BUTTON && e.data > 0) {
-                volume_mode_ = !volume_mode_;
-                hw.PrintLine("Volume mode: %s", volume_mode_ ? "ON" : "OFF");
-                if(volume_mode_) {
-                    // При входе в режим громкости синхронизируем значения с текущими громкостями голосов
-                    for(size_t i = 0; i < 8; i++) {
-                        encoder_volumes_[i] = voice_manager_->GetVoice(i).volume;  // Используем volume
-                        hw.PrintLine("Voice %d volume: %d%%", i, (int)(encoder_volumes_[i] * 100.0f));
-                    }
-                } else {
-                    ShowPage(PAGE_PITCH);
-                }
+            if(e.control_id == BTN::PITCH_BUTTON) {
+                // volume_mode_ = !volume_mode_;
+                // hw.PrintLine("Volume mode: %s", volume_mode_ ? "ON" : "OFF");
+                // if(volume_mode_) {
+                //     // При входе в режим громкости синхронизируем значения с текущими громкостями голосов
+                //     for(size_t i = 0; i < 8; i++) {
+                //         encoder_volumes_[i] = voice_manager_->GetVoice(i).volume;  // Используем volume
+                //         hw.PrintLine("Voice %d volume: %d%%", i, (int)(encoder_volumes_[i] * 100.0f));
+                //     }
+                // } else {
+                //     ShowPage(PAGE_PITCH);
+                // }
+                encoders_->set_sensitivity(3);
+                ShowPage(PAGE_PITCH);
+                return;
             }
             if(e.control_id == BTN::CLEAR_BUTTON) {
-                __disable_irq();
-                daisy::System::ResetToBootloader(daisy::System::BootloaderMode::DAISY_INFINITE_TIMEOUT);
+                // __disable_irq();
+                // daisy::System::ResetToBootloader(daisy::System::BootloaderMode::DAISY_INFINITE_TIMEOUT);
             }
             current_page_->OnSwitch(e.control_id, e.data > 0);
+            break;
+
+        case CONTROL_SLIDER_CHANGED:
+            hw.PrintLine("Slider %d: position=%d", e.control_id, e.data);
+            if(current_page_) {
+                current_page_->OnSliderChanged(e.data, e.control_id);
+            }
             break;
 
         // Добавляем обработку остальных событий
@@ -190,9 +203,6 @@ void Ui::HandlePageEvent(const Event& e) {
 }
 
 void Ui::DoEvents() {
-    // static uint32_t next_display_update = 0;
-    // uint32_t now = system_clock.milliseconds();
-
     while (queue_.available()) {
         HandlePageEvent(queue_.PullEvent());
     }
@@ -204,18 +214,12 @@ void Ui::DoEvents() {
         }
     }
 
-    // if(current_page_ && now >= next_display_update && pots_->IsFullySampled()) {
-    //     current_page_->UpdateDisplay();
-    //     next_display_update = now + DISPLAY_UPDATE_INTERVAL;
-    //     System::DelayUs(50);
-    // }
-    if(current_page_ ) {
-        // hw.PrintLine("Update display");
+    // Проверяем, прошло ли достаточно времени с последнего обновления
+    uint32_t now = system_clock.milliseconds();
+    if(current_page_ && (now - last_display_update_) >= kDisplayUpdateInterval) {
         current_page_->UpdateDisplay();
-        // next_display_update = now + DISPLAY_UPDATE_INTERVAL;
-        // System::DelayUs(50);
+        last_display_update_ = now;
     }
-
 }
 
 void Ui::FlushEvents() {
@@ -231,10 +235,12 @@ void Ui::InitPages() {
     // Статическое создание страниц
     static t8synth::PerformancePage performance_page;
     static t8synth::PitchPage pitch_page;
+    static t8synth::VolumePage volume_page;
 
     // Настройка указателей на страницы
     pages_[PAGE_PERFORMANCE] = &performance_page;
     pages_[PAGE_PITCH] = &pitch_page;
+    pages_[PAGE_VOLUME] = &volume_page;
 
     // Инициализация всех страниц
     for(int i = 0; i < PAGE_LAST; i++) {
@@ -245,7 +251,7 @@ void Ui::InitPages() {
     }
 
     // Установка начальной страницы
-    current_page_ = pages_[PAGE_PERFORMANCE];
+    current_page_ = pages_[PAGE_VOLUME];
     if(current_page_) {
         current_page_->OnEnterPage();
     }
