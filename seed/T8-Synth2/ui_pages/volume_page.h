@@ -189,10 +189,10 @@ private:
         // Помечаем область контента как требующую перерисовки
         regions_.content.dirty = 1;
         // Принудительно перерисовываем контент
-        RenderContent();
-        display_->DrawRegion(regions_.content.x, regions_.content.y,
-                           regions_.content.w, regions_.content.h,
-                           regions_.content.data);
+        // RenderContent();
+        // display_->DrawRegion(regions_.content.x, regions_.content.y,
+        //                    regions_.content.w, regions_.content.h,
+        //                    regions_.content.data);
         
         int volume_percent = static_cast<int>(normalized_volume * 100.0f);
         daisy::DaisySeed::PrintLine("Voice %d volume: %d%%", voice_index, volume_percent);

@@ -46,7 +46,7 @@ private:
         spi_config_.clock_polarity = SpiHandle::Config::ClockPolarity::LOW;
         spi_config_.clock_phase = SpiHandle::Config::ClockPhase::ONE_EDGE;
         spi_config_.nss = SpiHandle::Config::NSS::SOFT;
-        spi_config_.baud_prescaler = SpiHandle::Config::BaudPrescaler::PS_32;
+        spi_config_.baud_prescaler = SpiHandle::Config::BaudPrescaler::PS_8;
         
         // Configure shared pins
         spi_config_.pin_config.mosi = {DSY_GPIOA, 7};  // PA7

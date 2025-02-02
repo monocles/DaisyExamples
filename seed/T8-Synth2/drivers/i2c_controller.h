@@ -93,7 +93,7 @@ private:
     }
 
     static constexpr uint8_t kSlaveAddr1 = 8;   // Первый слайдер
-    static constexpr uint8_t kSlaveAddr3 = 10;  // Третий слайдер
+    static constexpr uint8_t kSlaveAddr3 = 9;  // Третий слайдер
     
     DaisySeed* hw_{nullptr};
     I2CHandle i2c_;

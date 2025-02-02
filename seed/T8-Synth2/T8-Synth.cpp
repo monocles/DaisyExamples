@@ -25,6 +25,8 @@ DisplayController display;
 I2CController sliders; // Создаем экземпляр I2C контроллера
 Ui ui;
 
+CpuLoadMeter loadMeter;
+
 static daisy::TimerHandle tim;
 static daisy::GPIO led;
 
@@ -43,6 +45,7 @@ Modulations modulations = {};
 
 void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size)
 {
+    loadMeter.OnBlockStart();
 	encoders.UpdateHardware();
     pots.Update();
 
@@ -85,6 +88,7 @@ void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, s
         OUT_L[i] = daisysp::SoftClip(mix_main);
         OUT_R[i] = daisysp::SoftClip(mix_aux);
     }
+    loadMeter.OnBlockEnd();
 }
 
 void InitPollTimer() {
@@ -92,7 +96,7 @@ void InitPollTimer() {
     tim_cfg.periph     = daisy::TimerHandle::Config::Peripheral::TIM_5;
     tim_cfg.dir        = daisy::TimerHandle::Config::CounterDir::UP;
     tim_cfg.enable_irq = true;
-    tim_cfg.period     = 120000; // 480MHz / 120000 = 1kHz (1ms period)
+    tim_cfg.period     = 120000 ; // 480MHz / 120000 = 1kHz (1ms period)
     tim.Init(tim_cfg);
     tim.SetCallback(TimerCallback);
     tim.Start();
@@ -104,6 +108,7 @@ int main(void)
 	hw.SetAudioBlockSize(BLOCK_SIZE); // number of samples handled per callback
 	hw.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_48KHZ);
   	hw.StartLog(true);
+    loadMeter.Init(hw.AudioSampleRate(), BLOCK_SIZE);
 	InitPollTimer();
 
     // Initialize SPI manager with hardware reference
@@ -125,5 +130,9 @@ int main(void)
 	while(1) {
             // hw.PrintLine("Pot 0: %f", pots.GetPotValue(0));
 		ui.DoEvents();
+        const float avgLoad = loadMeter.GetMaxCpuLoad();
+        FixedCapStr<16> str("CPU Load: ");
+        str.AppendFloat(avgLoad);
+        // hw.PrintLine(str);
 	}
 }
